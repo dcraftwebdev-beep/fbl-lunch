@@ -1,0 +1,276 @@
+.wrap {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+}
+
+.headRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ---------- header ---------- */
+
+.nameHead,
+.dayHead,
+.todayHead,
+.totalHead {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--ink);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.nameHead {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 2;
+  min-width: 160px;
+}
+
+.dayHead,
+.todayHead,
+.totalHead {
+  text-align: center;
+}
+
+.dayName {
+  display: block;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dayNum {
+  display: block;
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.todayHead {
+  background: var(--turmeric-soft);
+  color: var(--ink);
+  border-radius: 6px 6px 0 0;
+}
+
+.todayTag {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b0742a;
+  margin-top: 2px;
+}
+
+/* ---------- body ---------- */
+
+.nameCell {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 1;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.nameInner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cell,
+.todayCell,
+.totalCell {
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+  padding: 3px 4px;
+}
+
+.todayCell {
+  background: var(--turmeric-soft);
+}
+
+.mark {
+  width: 34px;
+  height: 30px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--leaf);
+  font-size: 13px;
+  transition: background 0.12s;
+}
+
+.mark:hover {
+  background: var(--leaf-soft);
+}
+
+.markOn:hover {
+  color: var(--chili);
+}
+
+.totalCell {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.inactiveRow .nameCell {
+  color: var(--ink-soft);
+}
+
+.inactiveTag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1px 7px;
+}
+
+.emptyRow {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+/* ---------- footer ---------- */
+
+.footLabel {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  text-align: left;
+  font-weight: 600;
+  padding: 10px;
+  border-top: 2px solid var(--ink);
+  white-space: nowrap;
+}
+
+.footCell,
+.todayFoot,
+.footTotal {
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 4px;
+  border-top: 2px solid var(--ink);
+}
+
+.todayFoot {
+  background: var(--turmeric-soft);
+  border-radius: 0 0 6px 6px;
+}
+
+.footTotal {
+  color: var(--leaf);
+}
+
+.guestSup {
+  font-size: 10px;
+  color: #b0742a;
+  margin-left: 3px;
+}
+
+/* FSSAI pref dots (shared look with TodayPanel) */
+.dotVeg,
+.dotNonveg {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1.5px solid var(--leaf);
+}
+
+.dotVeg::after,
+.dotNonveg::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--leaf);
+}
+
+.dotNonveg {
+  border-color: var(--chili);
+}
+
+.dotNonveg::after {
+  background: var(--chili);
+}
+
+/* ---------- empty ("no lunch") cells ---------- */
+
+.markOff .offGlyph {
+  color: var(--line-strong);
+  font-size: 13px;
+}
+
+.markOff .addGlyph {
+  display: none;
+  color: var(--leaf);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.markOff:hover .offGlyph {
+  display: none;
+}
+
+.markOff:hover .addGlyph {
+  display: inline;
+}
+
+.totalZero {
+  color: var(--chili);
+}
+
+.zeroDay {
+  color: var(--line-strong);
+}

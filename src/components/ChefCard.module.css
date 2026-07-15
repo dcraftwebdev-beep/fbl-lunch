@@ -1,0 +1,161 @@
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.photo,
+.photoFallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 2px solid var(--turmeric);
+}
+
+.photoFallback {
+  display: grid;
+  place-items: center;
+  background: var(--turmeric-soft);
+  color: #b0742a;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 24px;
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+}
+
+.role {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.name {
+  margin: 1px 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editBtn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 5px 13px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.editBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 14px;
+}
+
+.field span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-size: 14px;
+}
+
+.field input:focus {
+  border-color: var(--leaf);
+  outline: none;
+}
+
+.saveBtn {
+  background: var(--ink);
+  color: var(--rice);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+.sendRow {
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sendBtn {
+  background: var(--turmeric);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: filter 0.15s;
+}
+
+.sendBtn:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.sendBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sendHint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}

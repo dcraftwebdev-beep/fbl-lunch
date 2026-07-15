@@ -1,0 +1,98 @@
+.card {
+  background: var(--leaf);
+  color: var(--rice);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.big {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bigNumber {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(52px, 6vw, 72px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.bigLabel {
+  font-size: 14px;
+  color: #cfe0d5;
+}
+
+.guestsNote {
+  font-style: normal;
+  color: var(--turmeric);
+}
+
+.split {
+  display: flex;
+  gap: 20px;
+  font-size: 14.5px;
+}
+
+.splitItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.splitCount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.dotVeg,
+.dotNonveg {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid var(--rice);
+  display: inline-grid;
+  place-items: center;
+}
+
+.dotVeg::after,
+.dotNonveg::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8fd6a8;
+}
+
+.dotNonveg::after {
+  background: #f0907f;
+}
+
+.small {
+  margin: 0;
+  display: flex;
+  gap: 24px;
+  border-top: 1px solid rgba(246, 247, 242, 0.2);
+  padding-top: 14px;
+}
+
+.smallItem dt {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a8c5b2;
+}
+
+.smallItem dd {
+  margin: 3px 0 0;
+  font-size: 14.5px;
+  font-weight: 500;
+}

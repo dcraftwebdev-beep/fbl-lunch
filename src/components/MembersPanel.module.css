@@ -1,0 +1,268 @@
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.addRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14.5px;
+}
+
+.nameInput:focus {
+  border-color: var(--leaf);
+  outline: none;
+}
+
+.prefToggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.prefOff,
+.prefOnVeg,
+.prefOnNonveg {
+  border: none;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  background: var(--card);
+  color: var(--ink-soft);
+}
+
+.prefOnVeg {
+  background: var(--leaf);
+  color: var(--rice);
+  font-weight: 600;
+}
+
+.prefOnNonveg {
+  background: var(--chili);
+  color: var(--rice);
+  font-weight: 600;
+}
+
+.addBtn {
+  background: var(--ink);
+  color: var(--rice);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.addBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.dupeNote {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--chili);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowInactive .rowName {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--line-strong);
+}
+
+.rowName {
+  flex: 1;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.smallBtn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  transition: all 0.15s;
+}
+
+.smallBtn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.dotVeg,
+.dotNonveg {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1.5px solid var(--leaf);
+}
+
+.dotVeg::after,
+.dotNonveg::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--leaf);
+}
+
+.dotNonveg {
+  border-color: var(--chili);
+}
+
+.dotNonveg::after {
+  background: var(--chili);
+}
+
+/* ---------- remove member ---------- */
+
+.removeBtn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  transition: all 0.15s;
+}
+
+.removeBtn:hover {
+  border-color: var(--chili);
+  color: var(--chili);
+  background: var(--chili-soft);
+}
+
+.confirmText {
+  font-size: 12.5px;
+  color: var(--chili);
+}
+
+.confirmBtn {
+  background: var(--chili);
+  color: var(--rice);
+  border: none;
+  border-radius: 100px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.confirmBtn:hover {
+  background: #a5301f;
+}
+
+/* ---------- member emails ---------- */
+
+.emailInput {
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: var(--font-mono);
+}
+
+.emailInput:focus {
+  border-color: var(--leaf);
+  outline: none;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowEmail,
+.rowEmailMissing {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowEmail:hover,
+.rowEmailMissing:hover {
+  color: var(--leaf);
+  text-decoration: underline;
+}
+
+.rowEmailMissing {
+  color: #b0742a;
+  /* font-style: italic; */
+}
+
+.rowEmailInput {
+  border: 1px solid var(--leaf);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  max-width: 260px;
+}
