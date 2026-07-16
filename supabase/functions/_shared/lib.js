@@ -63,6 +63,45 @@ export async function chefListSent(db, date) {
   return (data?.length ?? 0) > 0
 }
 
+/* ---------------- Basecamp Campfire ---------------- */
+// Posts a message into the team Campfire via the chatbot's Lines URL.
+// Set the secret:  BASECAMP_CHAT_URL = the chatbot's ".../lines" URL.
+// Never throws — a Basecamp hiccup must not break emails or the register.
+
+export async function postToBasecamp(html) {
+  const url = Deno.env.get('BASECAMP_CHAT_URL')
+  if (!url) return false
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: html }),
+    })
+    if (!res.ok) console.error(`Basecamp ${res.status}: ${await res.text()}`)
+    return res.ok
+  } catch (err) {
+    console.error('Basecamp post failed:', err)
+    return false
+  }
+}
+
+/* ---------------- Google Calendar link ---------------- */
+// A plain "add to calendar" template link — no API, no auth. Clicking
+// it creates "Office Lunch" on the member's own Google Calendar.
+// Slot: 1:00–1:45 PM IST = 07:30–08:15 UTC.
+
+export const gcalLunchLink = (date) => {
+  const d = date.replaceAll('-', '')
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: 'Office Lunch 🍛',
+    dates: `${d}T073000Z/${d}T081500Z`,
+    details: 'Fresh office-kitchen lunch — marked on the Firebrand lunch register.',
+    location: 'Firebrand Labs office',
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
 /* ---------------- signed one-click join links ---------------- */
 // The 10:00 invite button carries an HMAC signature so nobody can add
 // someone else by guessing IDs. Deterministic per member+date; valid

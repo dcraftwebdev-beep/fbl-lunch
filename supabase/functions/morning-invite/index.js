@@ -1,9 +1,10 @@
 // morning-invite — scheduled at 10:00 IST (04:30 UTC).
 // Emails every ACTIVE member who is NOT yet on today's register:
-// "Want lunch today?" with ONE button. Clicking the button hits the
-// public join-lunch function and auto-marks them on today's register.
+// "Want lunch today?" with ONE button that opens the app's /join page,
+// where a single click adds them to today's register.
 // Deduped per member per day via email_log (kind: morning_invite).
 //
+// REQUIRES SECRET:  supabase secrets set APP_URL=https://your-app.vercel.app
 // DEPLOY:   supabase functions deploy morning-invite
 // SCHEDULE: cron `30 4 * * *`  (04:30 UTC = 10:00 IST)
 import {
@@ -15,12 +16,16 @@ import {
   todayIST,
   claimSend,
   signJoin,
+  postToBasecamp,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
+    const app = Deno.env.get('APP_URL')
+    if (!app) return json({ error: 'APP_URL secret is not set' }, 500)
+
     const db = admin()
     const date = todayIST()
 
@@ -39,7 +44,7 @@ Deno.serve(async (req) => {
       if (!fresh) continue
 
       const sig = await signJoin(m.id, date)
-      const joinUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/join-lunch?m=${m.id}&d=${date}&s=${sig}`
+      const joinUrl = `${app}/join?m=${m.id}&d=${date}&s=${sig}`
 
       const html = shell(
         'Lunch today? 🍛',
@@ -57,6 +62,15 @@ Deno.serve(async (req) => {
 
       await sendEmail(m.email, `Lunch today? One click to get on the register (${date})`, html)
       sent++
+    }
+
+    // Announce in Basecamp Campfire, once per day
+    if (await claimSend(db, 'bc_morning', date)) {
+      await postToBasecamp(
+        `🍛 <b>Lunch register is open for today (${date}).</b> ` +
+        `Type <b>!lunch in</b> right here to grab a plate, or use the button in your email. ` +
+        `Kitchen list locks at 11:00.`
+      )
     }
 
     return json({ ok: true, date, invited: sent, skipped: pending.length - sent })

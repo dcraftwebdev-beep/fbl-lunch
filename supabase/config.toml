@@ -27,3 +27,8 @@ entrypoint = "./functions/midday-confirm/index.js"
 entrypoint = "./functions/join-lunch/index.js"
 # The join button in emails must work without login:
 verify_jwt = false
+
+[functions.basecamp-lunch]
+entrypoint = "./functions/basecamp-lunch/index.js"
+# Basecamp sends no Supabase auth header:
+verify_jwt = false
