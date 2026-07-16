@@ -1,11 +1,16 @@
-import { format, parseISO } from 'date-fns'
+import { useState } from 'react'
+import { format, parseISO, subDays } from 'date-fns'
 import styles from './RegisterTable.module.css'
-
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 /**
- * The mess register: last 10 days, one row per member.
+ * The mess register: a 10-day window, one row per member.
  * Every cell is a toggle — click to mark someone in or out on any day,
- * including corrections to past days. Today's column is highlighted.
- * Empty cells show a faint dash with a rotating "no lunch" quip on hover.
+ * including corrections to past days. Today's column is highlighted
+ * (when today falls inside the visible window).
+ *
+ * Pager (top right): ◀ steps back 10 days, ▶ steps forward. The
+ * forward arrow disables on the latest window. Totals and the
+ * plates/day footer always reflect the visible window only.
  */
 
 const NO_LUNCH_LINES = [
@@ -26,21 +31,54 @@ const noLunchLine = (memberId, date) => {
   return NO_LUNCH_LINES[hash % NO_LUNCH_LINES.length]
 }
 
+const WINDOW = 10
+
 export default function RegisterTable({ data }) {
   const { members, days, today, isIn, toggleEntry, entries, dayMeta } = data
+
+  // How many 10-day pages we've stepped back. 0 = the latest window.
+  const [pageBack, setPageBack] = useState(0)
+
+  // Anchor on the last day of the incoming window (normally today),
+  // then slide back in whole 10-day steps.
+  const anchorEnd = parseISO(days[days.length - 1])
+  const windowEnd = subDays(anchorEnd, pageBack * WINDOW)
+  const visibleDays = Array.from({ length: WINDOW }, (_, i) =>
+    format(subDays(windowEnd, WINDOW - 1 - i), 'yyyy-MM-dd')
+  )
+
+  const rangeLabel = `${format(subDays(windowEnd, WINDOW - 1), 'dd/MM/yyyy')} – ${format(
+    windowEnd,
+    'dd/MM/yyyy'
+  )}`
+
+  // Only entries inside the visible window count toward totals here
+  const inWindow = (e) => visibleDays.includes(e.lunch_date)
+  const windowEntries = entries.filter(inWindow)
 
   const roster = members.filter(
     (m) => m.active || entries.some((e) => e.member_id === m.id)
   )
 
   const dayTotal = (d) => entries.filter((e) => e.lunch_date === d).length
-  const memberTotal = (id) => entries.filter((e) => e.member_id === id).length
+  const memberTotal = (id) =>
+    windowEntries.filter((e) => e.member_id === id).length
 
   return (
-    <section className={styles.wrap} aria-label="Last 10 days register">
+    <section className={styles.wrap} aria-label="Lunch register, 10 days at a time">
       <div className={styles.headRow}>
-        <h2 className={styles.heading}>The register — last 10 days</h2>
-        <p className={styles.hint}>Click any cell to correct a day, including past days.</p>
+        <h2 className={styles.heading}>The register</h2>
+        <div className={styles.pager}>
+          <span className={styles.hint}>Click any cell to correct a day.</span>
+          <button className={styles.pagerBtn} onClick={() => setPageBack((p) => p + 1)} aria-label="Previous 10 days" title="Previous 10 days" type="button">
+  <ChevronLeft size={16} strokeWidth={2.5} aria-hidden="true" />
+</button>
+
+          <span className={styles.rangeLabel}>{rangeLabel}</span>
+          <button className={styles.pagerBtn} onClick={() => setPageBack((p) => Math.max(p - 1, 0))} disabled={pageBack === 0} aria-label="Next 10 days" title={pageBack === 0 ? 'Already at the latest 10 days' : 'Next 10 days'} type="button">
+  <ChevronRight size={16} strokeWidth={2.5} aria-hidden="true" />
+</button>
+        </div>
       </div>
 
       <div className={styles.scroller}>
@@ -48,7 +86,7 @@ export default function RegisterTable({ data }) {
           <thead>
             <tr>
               <th className={styles.nameHead}>Member</th>
-              {days.map((d) => (
+              {visibleDays.map((d) => (
                 <th key={d} className={d === today ? styles.todayHead : styles.dayHead} scope="col">
                   <span className={styles.dayName}>{format(parseISO(d), 'EEE')}</span>
                   <span className={styles.dayNum}>{format(parseISO(d), 'dd/MM')}</span>
@@ -62,7 +100,7 @@ export default function RegisterTable({ data }) {
           <tbody>
             {roster.length === 0 && (
               <tr>
-                <td className={styles.emptyRow} colSpan={days.length + 2}>
+                <td className={styles.emptyRow} colSpan={visibleDays.length + 2}>
                   The roster is empty. Add your team in the Team roster panel below to start the register.
                 </td>
               </tr>
@@ -78,7 +116,7 @@ export default function RegisterTable({ data }) {
                       {!m.active && <span className={styles.inactiveTag}>left</span>}
                     </span>
                   </th>
-                  {days.map((d) => {
+                  {visibleDays.map((d) => {
                     const on = isIn(m.id, d)
                     return (
                       <td key={d} className={d === today ? styles.todayCell : styles.cell}>
@@ -102,7 +140,7 @@ export default function RegisterTable({ data }) {
                   })}
                   <td
                     className={`${styles.totalCell} ${total === 0 ? styles.totalZero : ''}`}
-                    title={total === 0 ? 'Zero lunches in 10 days. Living on coffee?' : undefined}
+                    title={total === 0 ? 'Zero lunches in these 10 days. Living on coffee?' : undefined}
                   >
                     {total}
                   </td>
@@ -114,7 +152,7 @@ export default function RegisterTable({ data }) {
           <tfoot>
             <tr>
               <th className={styles.footLabel} scope="row">Plates / day</th>
-              {days.map((d) => {
+              {visibleDays.map((d) => {
                 const guests = dayMeta[d]?.guest_count || 0
                 const plates = dayTotal(d) + guests
                 return (
@@ -128,7 +166,7 @@ export default function RegisterTable({ data }) {
                   </td>
                 )
               })}
-              <td className={styles.footTotal}>{entries.length}</td>
+              <td className={styles.footTotal}>{windowEntries.length}</td>
             </tr>
           </tfoot>
         </table>

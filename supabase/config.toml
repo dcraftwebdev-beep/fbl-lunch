@@ -1,5 +1,6 @@
 # Supabase CLI config — tells `supabase functions deploy` where each
 # function's entry file is (we use plain-JS index.js, not index.ts).
+
 project_id = "awqrddumrfbljqmakivv"
 
 [functions.send-chef-list]
@@ -14,4 +15,15 @@ entrypoint = "./functions/daily-funny/index.js"
 [functions.cancel-lunch]
 entrypoint = "./functions/cancel-lunch/index.js"
 # The cancel link in emails must work without login:
+verify_jwt = false
+
+[functions.morning-invite]
+entrypoint = "./functions/morning-invite/index.js"
+
+[functions.midday-confirm]
+entrypoint = "./functions/midday-confirm/index.js"
+
+[functions.join-lunch]
+entrypoint = "./functions/join-lunch/index.js"
+# The join button in emails must work without login:
 verify_jwt = false

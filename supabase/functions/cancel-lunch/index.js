@@ -1,37 +1,29 @@
 // cancel-lunch — the public link inside the member's confirmation email.
 // GET ?token=<cancel_token>  → deletes today's entry, notifies the chef (−1)
 // if the main list already went out, and shows a friendly HTML page.
+//
 // DEPLOY WITH:  supabase functions deploy cancel-lunch --no-verify-jwt
-import { admin, sendEmail, shell, todayIST, chefListSent } from '../_shared/lib.js'
-
-const page = (title, msg, ok = true) =>
-  new Response(
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-     <title>${title}</title></head>
-     <body style="margin:0;background:#f6f7f2;font-family:Arial,Helvetica,sans-serif;display:grid;place-items:center;min-height:100vh">
-       <div style="background:#fff;border:1px solid #e3e7de;border-radius:14px;padding:36px;max-width:420px;text-align:center">
-         <div style="width:52px;height:52px;margin:0 auto;border:2px solid ${ok ? '#1f5c38' : '#c03b2b'};border-radius:10px;display:grid;place-items:center">
-           <div style="width:20px;height:20px;border-radius:50%;background:${ok ? '#1f5c38' : '#c03b2b'}"></div>
-         </div>
-         <h1 style="font-size:22px;color:#1c221d;margin:12px 0 8px">${title}</h1>
-         <p style="color:#5a645c;font-size:15px;line-height:1.5;margin:0">${msg}</p>
-         <p style="color:#a8b5aa;font-size:12px;margin-top:22px">Firebrand Labs · Lunch Register</p>
-       </div>
-     </body></html>`,
-    {
-      status: ok ? 200 : 400,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-store',
-      },
-    }
-  )
+// ─────────────────────────────────────────────────────────────────────
+// THE FLAG IS THE FIX. The email button opens in a plain browser with
+// no Authorization header. If the function is deployed WITHOUT
+// --no-verify-jwt (or "Verify JWT" is ON in the dashboard), Supabase's
+// gateway rejects the request before this code ever runs — the browser
+// shows the gateway's raw error/code instead of the styled page below.
+// After deploying with the flag, confirm in Dashboard → Edge Functions
+// → cancel-lunch → Details that "Verify JWT" shows OFF.
+// ─────────────────────────────────────────────────────────────────────
+import { admin, sendEmail, shell, todayIST, htmlPage, chefListSent } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
+  // Email scanners prefetch links with HEAD — answer empty, cancel
+  // nothing, so a scanner can't silently remove someone's plate.
+  if (req.method === 'HEAD') return new Response(null, { status: 200 })
+
   try {
     const token = new URL(req.url).searchParams.get('token')
-    if (!token) return page('Missing link', 'This cancel link is incomplete. Open the button from your email again.', false)
+    if (!token) {
+      return htmlPage('Missing link', 'This cancel link is incomplete. Open the button from your email again.', false)
+    }
 
     const db = admin()
     const date = todayIST()
@@ -43,10 +35,10 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (!entry) {
-      return page('Already cancelled', 'This lunch was already cancelled, or the link has expired. Nothing more to do.', true)
+      return htmlPage('Already cancelled', 'This lunch was already cancelled, or the link has expired. Nothing more to do.', true)
     }
     if (entry.lunch_date !== date) {
-      return page('Link expired', 'This cancel link was for a past day. Today\'s lunch is managed on the dashboard.', false)
+      return htmlPage('Link expired', "This cancel link was for a past day. Today's lunch is managed on the dashboard.", false)
     }
 
     const { data: member } = await db.from('members').select('name, food_pref').eq('id', entry.member_id).single()
@@ -67,12 +59,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    return page(
+    return htmlPage(
       `Lunch cancelled, ${member?.name ?? 'done'}`,
-      'Your plate for today is off the list and the kitchen has been told. Changed your mind? Ask whoever runs the register to add you back.'
+      'Your plate for today is off the list and the kitchen has been told. Changed your mind? The 10 AM email button or the register admin can add you back.'
     )
   } catch (err) {
     console.error(err)
-    return page('Something went wrong', 'The cancel did not go through. Try the link once more, or tell the register admin.', false)
+    return htmlPage('Something went wrong', 'The cancel did not go through. Try the link once more, or tell the register admin.', false)
   }
 })

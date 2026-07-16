@@ -63,8 +63,69 @@ export async function chefListSent(db, date) {
   return (data?.length ?? 0) > 0
 }
 
+/* ---------------- signed one-click join links ---------------- */
+// The 10:00 invite button carries an HMAC signature so nobody can add
+// someone else by guessing IDs. Deterministic per member+date; valid
+// only for that date. Uses LUNCH_LINK_SECRET if set, otherwise falls
+// back to the service-role key (already secret).
+
+const linkSecret = () =>
+  Deno.env.get('LUNCH_LINK_SECRET') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+async function hmacHex(message) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(linkSecret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 32)
+}
+
+export const signJoin = (memberId, date) => hmacHex(`join|${memberId}|${date}`)
+
+export const verifyJoin = async (memberId, date, sig) =>
+  !!sig && (await signJoin(memberId, date)) === sig
+
+/* ---------------- browser-facing HTML page ---------------- */
+// One shared renderer for cancel-lunch and join-lunch success/error pages.
+
+export const htmlPage = (title, msg, ok = true) =>
+  new Response(
+    `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+</head>
+<body style="margin:0;background:#f6f7f2;font-family:Arial,Helvetica,sans-serif;display:grid;place-items:center;min-height:100vh">
+  <div style="background:#fff;border:1px solid #e3e7de;border-radius:14px;padding:36px;max-width:420px;text-align:center">
+    <div style="width:52px;height:52px;margin:0 auto;border:2px solid ${ok ? '#1f5c38' : '#c03b2b'};border-radius:10px;display:grid;place-items:center">
+      <div style="width:20px;height:20px;border-radius:50%;background:${ok ? '#1f5c38' : '#c03b2b'}"></div>
+    </div>
+    <h1 style="font-size:22px;color:#1c221d;margin:12px 0 8px">${title}</h1>
+    <p style="color:#5a645c;font-size:15px;line-height:1.5;margin:0">${msg}</p>
+    <p style="color:#a8b5aa;font-size:12px;margin-top:22px">Firebrand Labs · Lunch Register</p>
+  </div>
+</body>
+</html>`,
+    {
+      status: ok ? 200 : 400,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
+
 /* ---------------- email shell ---------------- */
- 
+
 export const shell = (title, body) => `
 <div style="font-family:Arial,Helvetica,sans-serif;background:#f6f7f2;padding:24px">
   <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e3e7de;border-radius:12px;overflow:hidden">
@@ -78,9 +139,9 @@ export const shell = (title, body) => `
     </div>
   </div>
 </div>`
- 
+
 /* ---------------- rotating daily messages ---------------- */
- 
+
 // For members who did NOT order — one line per day, cycles through the pool.
 export const NOT_ORDERED_LINES = [
   "Don't eat outside bro, your stomach is going to burn. Fresh food is cooking right here in the office. 🔥",
@@ -99,7 +160,7 @@ export const NOT_ORDERED_LINES = [
   "Your tummy called. It said the outside oil is doing renovations it never approved.",
   'One @ a day keeps the gastroenterologist away. Just saying.',
 ]
- 
+
 // For members who DID order — motivation / light praise, one per day.
 export const ORDERED_LINES = [
   'Lunch marked like a responsible adult. Your plate is on the stove. ✅',
@@ -118,4 +179,3 @@ export const ORDERED_LINES = [
   "On the list again. At this rate you'll be Most Regular on the dashboard.",
   "Smart. Fed people ship better work — it's basically science.",
 ]
- 

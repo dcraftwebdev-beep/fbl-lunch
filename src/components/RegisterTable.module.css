@@ -8,7 +8,7 @@
 
 .headRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
@@ -27,6 +27,53 @@
   margin: 0;
   font-size: 13px;
   color: var(--ink-soft);
+}
+
+/* ---------- pager (top right) ---------- */
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager .hint {
+  margin-right: 6px;
+}
+
+.pagerBtn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.pagerBtn:hover:not(:disabled) {
+  background: var(--leaf-soft);
+  border-color: var(--leaf);
+}
+
+.pagerBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rangeLabel {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  min-width: 96px;
+  text-align: center;
 }
 
 .scroller {
