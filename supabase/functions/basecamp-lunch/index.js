@@ -14,7 +14,7 @@
 //
 // DEPLOY: config.toml entry with verify_jwt = false, then
 //         supabase functions deploy basecamp-lunch
-import { admin, sendEmail, shell, todayIST, chefListSent } from '../_shared/lib.js'
+import { admin, sendEmail, shell, todayIST, chefListSent, claimSend } from '../_shared/lib.js'
 
 const CUTOFF_MIN = 11 * 60 + 15 // 11:15 IST
 
@@ -41,10 +41,18 @@ const TIMES_UP_LINES = [
   "Too late da. The chef counts plates, not feelings. Order window closed at 11:15 sharp.",
 ]
 
-const NO_CANCEL_LINES = [
-  "Can't cancel now — it's past 11:15 and your plate is already becoming food. Eat it with pride. 🍛",
-  "The kitchen has already committed to your plate. Cancelling now would break the chef's heart AND the count.",
-  "Past 11:15, cancellations go straight to /dev/null. Your lunch is happening. Enjoy it.",
+const NO_CANCEL_SPEECH = [
+  "Time over buddy ⏰ And wait… why are you even trying to cancel? Fresh, healthy, home-made-style food is cooking for you RIGHT NOW. Let me guess — you changed your mind and want to order outside food, right? 👀 Not happening. Non-cancellable now. Go eat the healthy stuff, thank me later. Bye. 🍛",
+  "Cancel? After 11:15? Interesting. The kitchen already counted your plate, the list went to the chef, the vessels are ON. And you want outside oil instead of this home-style goodness? Denied. Eat healthy, live long, bye. 👋",
+  "The list already reached the kitchen. If you cancel now, that food goes to WASTE — and this bot does not do food waste. Your plate is happening. It's healthy, it's fresh, it's yours. Go be grateful. Bye. 🍛",
+]
+
+const SLEEPY_LINES = [
+  "Read my earlier reply again. I already explained everything. I'm sleeping now, don't disturb. 😴",
+  "You again? The answer hasn't changed while you were typing. Go and do some work. 💻",
+  "Still trying? Respect the persistence, but the plate stays. Bot has gone back to sleep. Do not disturb. 😴",
+  "I gave you the full speech already. Scroll up, read it, eat your lunch. This bot is off duty. 🛌",
+  "Bro. It's the same answer. Channel this energy into your deadlines instead. Bye again. 👋",
 ]
 
 const THANKS_LINES = [
@@ -172,7 +180,12 @@ Deno.serve(async (req) => {
 
     /* ---------- out ---------- */
     if (wantsOut) {
-      if (pastCutoff) return say(pick(NO_CANCEL_LINES))
+      if (pastCutoff) {
+        // First attempt today → the full lecture.
+        // Every attempt after that → sleepy "don't disturb" replies.
+        const firstDeny = await claimSend(db, 'bc_cancel_deny', date, member.id)
+        return say(firstDeny ? pick(NO_CANCEL_SPEECH) : pick(SLEEPY_LINES))
+      }
       if (!existing) return say(`<b>${member.name}</b>, you weren't on today's list — nothing to cancel.`)
 
       await db.from('lunch_entries').delete().eq('id', existing.id)

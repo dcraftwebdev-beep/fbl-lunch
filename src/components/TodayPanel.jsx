@@ -6,10 +6,11 @@ import styles from './TodayPanel.module.css'
  * add several people in a row. "Add everyone remaining" fills the rest.
  * Click outside or press Escape to close.
  *
- * ORDER CUTOFF — 11:15 IST: after that, adding people (composer,
- * add-all, copy-yesterday, guest +) is blocked with a rotating
- * "see you tomorrow" quip. Removing people stays allowed, so the
- * admin can still correct the list if someone leaves early.
+ * ORDER CUTOFF — 11:15 IST: after that, the list is with the kitchen,
+ * so BOTH directions lock. Adding (composer, add-all, copy-yesterday,
+ * guest +) gets a "see you tomorrow" quip; removing (chips, guest −)
+ * gets a "food will go to waste" quip. Corrections after 11:15 go
+ * through the register table below (admin override).
  */
 
 const CUTOFF_MIN = 11 * 60 + 15 // 11:15 IST
@@ -20,6 +21,13 @@ const CLOSED_LINES = [
   "Too late for today — the chef is already mid-tadka. Fresh chances open tomorrow morning.",
   'Orders closed at 11:15. Time flies, plates get counted. Catch the register tomorrow!',
   "The 11:15 gate has shut. Today's lunch is destiny now. See you tomorrow, early bird.",
+]
+
+const NO_REMOVE_LINES = [
+  "Can't remove now — the list already went to the kitchen and that plate is being cooked. Removing it = food waste, and we don't do that here. 🍛",
+  'Too late to pull a plate — the chef is already cooking to the count. That food would go to waste. It stays.',
+  "The kitchen has this list since 11:15. Cancelling now wastes a cooked plate — better someone eats it. No removals.",
+  "Plate's already in progress. Removing it now just wastes good food. If it's a genuine mistake, fix it in the register table below.",
 ]
 
 // Minutes since midnight in IST, regardless of the device's timezone
@@ -48,9 +56,11 @@ export default function TodayPanel({ data }) {
     return () => clearInterval(t)
   }, [])
 
-  // Show a rotating "closed" quip near the composer, auto-hide after 4s
-  const showClosed = () => {
-    setClosedMsg(CLOSED_LINES[Math.floor(Math.random() * CLOSED_LINES.length)])
+  // Show a rotating quip near the composer, auto-hide after 4s.
+  // Pass a pool: CLOSED_LINES for blocked adds, NO_REMOVE_LINES for
+  // blocked removals.
+  const showClosed = (pool = CLOSED_LINES) => {
+    setClosedMsg(pool[Math.floor(Math.random() * pool.length)])
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setClosedMsg(''), 4000)
   }
@@ -128,10 +138,18 @@ export default function TodayPanel({ data }) {
     }
   }
 
+  // Removing a plate is blocked after cutoff — the kitchen already
+  // has the list, so a removed plate is cooked food gone to waste.
+  const tryRemove = (m) => {
+    if (nowISTMinutes() >= CUTOFF_MIN) { showClosed(NO_REMOVE_LINES); return }
+    toggleEntry(m.id, today, m.name)
+  }
+
   const bumpGuests = (delta) => {
-    // Adding guest plates is also an order — blocked after cutoff.
-    // Reducing is a correction — always allowed.
+    // Both directions are orders once the kitchen has the list:
+    // + after cutoff = uncounted plate, − after cutoff = wasted plate.
     if (delta > 0 && nowISTMinutes() >= CUTOFF_MIN) { showClosed(); return }
+    if (delta < 0 && nowISTMinutes() >= CUTOFF_MIN) { showClosed(NO_REMOVE_LINES); return }
     const next = Math.max(0, (meta.guest_count || 0) + delta)
     setMeta(today, { guest_count: next })
   }
@@ -220,12 +238,16 @@ export default function TodayPanel({ data }) {
           <button
             key={m.id}
             className={styles.chip}
-            onClick={() => toggleEntry(m.id, today, m.name)}
-            title={`Remove ${m.name} from today`}
+            onClick={() => tryRemove(m)}
+            title={
+              ordersClosed
+                ? `List is with the kitchen — ${m.name}'s plate can't be removed now`
+                : `Remove ${m.name} from today`
+            }
           >
             <span className={m.food_pref === 'veg' ? styles.dotVeg : styles.dotNonveg} aria-hidden="true" />
             {m.name}
-            <span className={styles.chipX} aria-hidden="true">×</span>
+            <span className={styles.chipX} aria-hidden="true">{ordersClosed ? '🔒' : '×'}</span>
           </button>
         ))}
       </div>
