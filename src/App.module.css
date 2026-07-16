@@ -37,9 +37,9 @@
 }
 
 .errorBar {
-  background: var(--chili-soft);
+  background: var(--flame-soft);
   border: 1px solid #e6c4bd;
-  color: var(--chili);
+  color: var(--accent);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
   font-size: 14px;
@@ -55,7 +55,7 @@
 }
 
 .demoNote {
-  color: var(--turmeric);
+  color: var(--warning);
 }
 
 @media (max-width: 900px) {

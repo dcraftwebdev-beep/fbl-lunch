@@ -1,33 +1,56 @@
 /* ============================================================
    Firebrand Labs · Lunch Register — design tokens
-   Palette: Rice / Ink / Leaf / Chili / Turmeric
-   Type:    Bricolage Grotesque (display) · Archivo (body)
+   Palette: extracted from the Firebrand logo dots
+            Gold / Amber / Flame / Ember + Ink wordmark
+   Type:    Bricolage Grotesque (display) · Outfit (body)
             Spline Sans Mono (register data)
    ============================================================ */
 
 :root {
-  --rice: #f6f7f2;
+  /* --- Surfaces --- */
+  --paper: #faf8f3;            /* warm off-white app background */
   --card: #ffffff;
-  --ink: #1c221d;
-  --ink-soft: #5a645c;
-  --line: #e3e7de;
-  --line-strong: #cdd4c9;
+  --ink: #171412;              /* wordmark black, warmed for screens */
+  --ink-soft: #6b625a;
+  --line: #ece7dd;
+  --line-strong: #d9d1c2;
 
-  --leaf: #1f5c38;
-  --leaf-deep: #17452b;
-  --leaf-soft: #eaf3ec;
-  --chili: #c03b2b;
-  --chili-soft: #f9ece9;
-  --turmeric: #e9a13b;
-  --turmeric-soft: #fdf4e3;
+  /* --- Brand flame (logo dots, left → right) --- */
+  --gold: #fcca00;
+  --gold-soft: #fef7dd;
+  --amber: #f59401;
+  --amber-soft: #fdf1de;
+  --flame: #ee6200;
+  --flame-soft: #fdeadd;
+  --ember: #df2429;
+  --ember-soft: #fbe7e6;
+ 
 
-  --font-display: 'Bricolage Grotesque', 'Archivo', sans-serif;
-  --font-body: 'Archivo', system-ui, sans-serif;
+  /* Deep shades for hover / pressed states */
+  --gold-deep: #d9ac00;
+  --amber-deep: #ce7c00;
+  --flame-deep: #c85200;
+  --ember-deep: #b71c20;
+
+  /* --- Semantic aliases --- */
+  --primary: var(--ember);
+  --primary-deep: var(--ember-deep);
+  --primary-soft: var(--ember-soft);
+  --accent: var(--flame);
+  --warning: var(--amber);
+  --warning-soft: var(--amber-soft);
+  --highlight: var(--gold);
+  --highlight-soft: var(--gold-soft);
+
+  /* --- Type --- */
+  --font-display: 'Bricolage Grotesque', 'Outfit', sans-serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
   --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
 
+  /* --- Shape & depth --- */
   --radius: 14px;
   --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(28, 34, 29, 0.05), 0 8px 24px -12px rgba(28, 34, 29, 0.12);
+  --shadow: 0 1px 2px rgba(23, 20, 18, 0.05), 0 8px 24px -12px rgba(23, 20, 18, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -38,7 +61,7 @@ html, body {
 }
 
 body {
-  background: var(--rice);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;
@@ -56,7 +79,7 @@ input, textarea, select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--leaf);
+  outline: 2px solid var(--flame);
   outline-offset: 2px;
 }
 

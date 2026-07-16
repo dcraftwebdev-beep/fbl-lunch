@@ -1,6 +1,6 @@
 .card {
-  background: var(--leaf);
-  color: var(--rice);
+  background: var(--primary);
+  color: var(--paper);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 22px 24px;
@@ -31,7 +31,7 @@
 
 .guestsNote {
   font-style: normal;
-  color: var(--turmeric);
+  color: var(--warning);
 }
 
 .split {
@@ -57,7 +57,7 @@
   width: 14px;
   height: 14px;
   border-radius: 3px;
-  border: 1.5px solid var(--rice);
+  border: 1.5px solid var(--paper);
   display: inline-grid;
   place-items: center;
 }

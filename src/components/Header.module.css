@@ -1,6 +1,6 @@
 .header {
-  background: var(--leaf-deep);
-  color: var(--rice);
+  background: var( --primary);
+  color: var(--paper);
 }
 
 .inner {
@@ -23,7 +23,7 @@
 .mark {
   width: 40px;
   height: 40px;
-  border: 2px solid var(--rice);
+  border: 2px solid var(--paper);
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -34,7 +34,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--turmeric);
+  background: var(--warning);
 }
 
 .company {
@@ -80,8 +80,8 @@
 
 .pillLive {
   background: rgba(233, 161, 59, 0.15);
-  border-color: var(--turmeric);
-  color: var(--turmeric);
+  border-color: var(--warning);
+  color: var(--warning);
 }
 
 .pillDemo {

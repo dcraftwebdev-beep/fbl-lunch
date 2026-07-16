@@ -40,14 +40,14 @@
 }
 
 .preset:hover {
-  border-color: var(--leaf);
-  color: var(--leaf);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .presetActive {
-  background: var(--leaf-soft);
-  border-color: var(--leaf);
-  color: var(--leaf);
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
   font-weight: 500;
 }
 
@@ -81,13 +81,13 @@
 }
 
 .field input:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
 }
 
 .downloadBtn {
-  background: var(--leaf);
-  color: var(--rice);
+  background: var(--primary);
+  color: var(--paper);
   border: none;
   border-radius: var(--radius-sm);
   padding: 13px 18px;
@@ -97,7 +97,7 @@
 }
 
 .downloadBtn:hover:not(:disabled) {
-  background: var(--leaf-deep);
+  background: var(--primary-deep);
 }
 
 .downloadBtn:disabled {

@@ -1,5 +1,5 @@
 .card {
-  background: var(--card);
+  background: var(--primary-soft);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -22,13 +22,13 @@
   border-radius: 50%;
   flex-shrink: 0;
   object-fit: cover;
-  border: 2px solid var(--turmeric);
+  border: 2px solid var(--warning);
 }
 
 .photoFallback {
   display: grid;
   place-items: center;
-  background: var(--turmeric-soft);
+  background: var(--warning-soft);
   color: #b0742a;
   font-family: var(--font-display);
   font-weight: 800;
@@ -111,13 +111,13 @@
 }
 
 .field input:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
 }
 
 .saveBtn {
   background: var(--ink);
-  color: var(--rice);
+  color: var(--paper);
   border: none;
   border-radius: var(--radius-sm);
   padding: 10px 16px;
@@ -135,7 +135,7 @@
 }
 
 .sendBtn {
-  background: var(--turmeric);
+  background: var(--warning);
   color: var(--ink);
   border: none;
   border-radius: var(--radius-sm);

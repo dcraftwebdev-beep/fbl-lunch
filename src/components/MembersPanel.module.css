@@ -39,7 +39,7 @@
 }
 
 .nameInput:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -61,20 +61,20 @@
 }
 
 .prefOnVeg {
-  background: var(--leaf);
-  color: var(--rice);
+  background: var(--primary);
+  color: var(--paper);
   font-weight: 600;
 }
 
 .prefOnNonveg {
-  background: var(--chili);
-  color: var(--rice);
+  background: var(--accent);
+  color: var(--paper);
   font-weight: 600;
 }
 
 .addBtn {
-  background: var(--ink);
-  color: var(--rice);
+  background: var(--primary);
+  color: var(--paper);
   border: none;
   border-radius: var(--radius-sm);
   padding: 9px 16px;
@@ -90,7 +90,7 @@
 .dupeNote {
   margin: -6px 0 0;
   font-size: 13px;
-  color: var(--chili);
+  color: var(--accent);
 }
 
 .list {
@@ -149,7 +149,7 @@
   flex-shrink: 0;
   display: inline-grid;
   place-items: center;
-  border: 1.5px solid var(--leaf);
+  border: 1.5px solid var(--primary);
 }
 
 .dotVeg::after,
@@ -158,15 +158,15 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--leaf);
+  background: var(--primary);
 }
 
 .dotNonveg {
-  border-color: var(--chili);
+  border-color: var(--accent);
 }
 
 .dotNonveg::after {
-  background: var(--chili);
+  background: var(--accent);
 }
 
 /* ---------- remove member ---------- */
@@ -183,19 +183,19 @@
 }
 
 .removeBtn:hover {
-  border-color: var(--chili);
-  color: var(--chili);
-  background: var(--chili-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--flame-soft);
 }
 
 .confirmText {
   font-size: 12.5px;
-  color: var(--chili);
+  color: var(--accent);
 }
 
 .confirmBtn {
-  background: var(--chili);
-  color: var(--rice);
+  background: var(--accent);
+  color: var(--paper);
   border: none;
   border-radius: 100px;
   padding: 5px 12px;
@@ -221,7 +221,7 @@
 }
 
 .emailInput:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -249,7 +249,7 @@
 
 .rowEmail:hover,
 .rowEmailMissing:hover {
-  color: var(--leaf);
+  color: var(--primary);
   text-decoration: underline;
 }
 
@@ -259,7 +259,7 @@
 }
 
 .rowEmailInput {
-  border: 1px solid var(--leaf);
+  border: 1px solid var(--primary);
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 12.5px;

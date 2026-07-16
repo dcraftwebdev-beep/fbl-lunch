@@ -57,8 +57,8 @@
 }
 
 .pagerBtn:hover:not(:disabled) {
-  background: var(--leaf-soft);
-  border-color: var(--leaf);
+  background: var(--primary-soft);
+  border-color: var(--primary);
 }
 
 .pagerBtn:disabled {
@@ -130,7 +130,7 @@
 }
 
 .todayHead {
-  background: var(--turmeric-soft);
+  background: var(--warning-soft);
   color: var(--ink);
   border-radius: 6px 6px 0 0;
 }
@@ -175,7 +175,7 @@
 }
 
 .todayCell {
-  background: var(--turmeric-soft);
+  background: var(--warning-soft);
 }
 
 .mark {
@@ -184,17 +184,17 @@
   border: none;
   background: none;
   border-radius: 6px;
-  color: var(--leaf);
+  color: var(--primary);
   font-size: 13px;
   transition: background 0.12s;
 }
 
 .mark:hover {
-  background: var(--leaf-soft);
+  background: var(--primary-soft);
 }
 
 .markOn:hover {
-  color: var(--chili);
+  color: var(--accent);
 }
 
 .totalCell {
@@ -249,12 +249,12 @@
 }
 
 .todayFoot {
-  background: var(--turmeric-soft);
+  background: var(--warning-soft);
   border-radius: 0 0 6px 6px;
 }
 
 .footTotal {
-  color: var(--leaf);
+  color: var(--primary);
 }
 
 .guestSup {
@@ -272,7 +272,7 @@
   flex-shrink: 0;
   display: inline-grid;
   place-items: center;
-  border: 1.5px solid var(--leaf);
+  border: 1.5px solid var(--primary);
 }
 
 .dotVeg::after,
@@ -281,15 +281,15 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--leaf);
+  background: var(--primary);
 }
 
 .dotNonveg {
-  border-color: var(--chili);
+  border-color: var(--accent);
 }
 
 .dotNonveg::after {
-  background: var(--chili);
+  background: var(--accent);
 }
 
 /* ---------- empty ("no lunch") cells ---------- */
@@ -301,7 +301,7 @@
 
 .markOff .addGlyph {
   display: none;
-  color: var(--leaf);
+  color: var(--primary);
   font-size: 15px;
   font-weight: 600;
 }
@@ -315,7 +315,7 @@
 }
 
 .totalZero {
-  color: var(--chili);
+  color: var(--accent);
 }
 
 .zeroDay {

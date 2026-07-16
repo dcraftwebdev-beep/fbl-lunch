@@ -36,8 +36,8 @@
 }
 
 .copyBtn:hover {
-  border-color: var(--leaf);
-  color: var(--leaf);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* ---------- composer ---------- */
@@ -52,12 +52,12 @@
   border-radius: var(--radius-sm);
   padding: 13px 16px;
   font-size: 16px;
-  background: var(--rice);
+  background: var(--paper);
   transition: border-color 0.15s;
 }
 
 .input:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
   background: var(--card);
 }
@@ -97,7 +97,7 @@
 }
 
 .optionActive {
-  background: var(--leaf-soft);
+  background: var(--primary-soft);
 }
 
 .optionName {
@@ -126,7 +126,7 @@
   flex-shrink: 0;
   display: inline-grid;
   place-items: center;
-  border: 1.5px solid var(--leaf);
+  border: 1.5px solid var(--primary);
   position: relative;
 }
 
@@ -136,15 +136,15 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--leaf);
+  background: var(--primary);
 }
 
 .dotNonveg {
-  border-color: var(--chili);
+  border-color: var(--accent);
 }
 
 .dotNonveg::after {
-  background: var(--chili);
+  background: var(--accent);
 }
 
 /* ---------- chips ---------- */
@@ -160,7 +160,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--leaf-soft);
+  background: var(--primary-soft);
   border: 1px solid #cfe2d4;
   border-radius: 100px;
   padding: 7px 12px 7px 10px;
@@ -171,7 +171,7 @@
 }
 
 .chip:hover {
-  background: var(--chili-soft);
+  background: var(--flame-soft);
   border-color: #e6c4bd;
 }
 
@@ -220,13 +220,13 @@
   width: 36px;
   height: 36px;
   border: none;
-  background: var(--rice);
+  background: var(--paper);
   font-size: 18px;
   color: var(--ink);
 }
 
 .stepper button:hover {
-  background: var(--leaf-soft);
+  background: var(--primary-soft);
 }
 
 .guestCount {
@@ -252,7 +252,7 @@
 }
 
 .note:focus {
-  border-color: var(--leaf);
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -262,7 +262,7 @@
   width: 100%;
   text-align: left;
   padding: 9px 10px;
-  background: var(--turmeric-soft);
+  background: var(--warning-soft);
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -272,6 +272,6 @@
 }
 
 .addAll:hover {
-  background: var(--turmeric);
+  background: var(--warning);
   color: var(--card);
 }

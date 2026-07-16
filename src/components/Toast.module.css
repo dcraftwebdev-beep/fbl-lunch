@@ -4,7 +4,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: var(--rice);
+  color: var(--paper);
   font-family: var(--font-mono);
   font-size: 13px;
   padding: 10px 18px;
@@ -15,7 +15,7 @@
 }
 
 .error {
-  background: var(--chili);
+  background: var(--accent);
 }
 
 @keyframes rise {

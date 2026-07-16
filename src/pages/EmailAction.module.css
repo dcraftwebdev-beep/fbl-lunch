@@ -7,7 +7,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--bg, #f6f7f2);
+  background: var(--paper, #f6f7f2);
 }
 
 .card {
@@ -43,7 +43,7 @@
   border-radius: 12px;
   display: grid;
   place-items: center;
-  border: 2px solid var(--leaf, #1f5c38);
+  border: 2px solid var(--primary, #1f5c38);
 }
 
 .badge::after {
@@ -51,15 +51,15 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--leaf, #1f5c38);
+  background: var(--primary, #1f5c38);
 }
 
 .badgeBad {
-  border-color: var(--chili, #c03b2b);
+  border-color: var(--accent, #c03b2b);
 }
 
 .badgeBad::after {
-  background: var(--chili, #c03b2b);
+  background: var(--accent, #c03b2b);
 }
 
 .title {
@@ -89,7 +89,7 @@
   width: 100%;
   border: none;
   border-radius: 10px;
-  background: var(--leaf, #1f5c38);
+  background: var(--primary, #1f5c38);
   color: #fff;
   font-family: var(--font-body, inherit);
   font-size: 15.5px;
@@ -113,7 +113,7 @@
 }
 
 .dangerBtn {
-  background: var(--chili, #c03b2b);
+  background: var(--accent, #c03b2b);
 }
 
 .ghostBtn {
@@ -131,7 +131,7 @@
 }
 
 .ghostBtn:hover {
-  background: var(--leaf-soft, #e8f0e9);
+  background: var(--primary-soft, #e8f0e9);
 }
 
 .fine {
