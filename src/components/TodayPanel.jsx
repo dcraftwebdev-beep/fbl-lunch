@@ -5,14 +5,56 @@ import styles from './TodayPanel.module.css'
  * The daily roll-call. Type @ once — the roster stays open so you can
  * add several people in a row. "Add everyone remaining" fills the rest.
  * Click outside or press Escape to close.
+ *
+ * ORDER CUTOFF — 11:15 IST: after that, adding people (composer,
+ * add-all, copy-yesterday, guest +) is blocked with a rotating
+ * "see you tomorrow" quip. Removing people stays allowed, so the
+ * admin can still correct the list if someone leaves early.
  */
+
+const CUTOFF_MIN = 11 * 60 + 15 // 11:15 IST
+
+const CLOSED_LINES = [
+  "Today's order time is over ⏰ The kitchen has locked the count. See you tomorrow at 10!",
+  'Register closed for today. The rice has entered its no-refunds phase. Tomorrow, be quick!',
+  "Too late for today — the chef is already mid-tadka. Fresh chances open tomorrow morning.",
+  'Orders closed at 11:15. Time flies, plates get counted. Catch the register tomorrow!',
+  "The 11:15 gate has shut. Today's lunch is destiny now. See you tomorrow, early bird.",
+]
+
+// Minutes since midnight in IST, regardless of the device's timezone
+const nowISTMinutes = () => {
+  const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes()
+}
+
 export default function TodayPanel({ data }) {
   const { members, today, todayMemberIds, addToday, toggleEntry, copyYesterday, dayMeta, setMeta } = data
 
   const [text, setText] = useState('')
   const [highlight, setHighlight] = useState(0)
+  const [closedMsg, setClosedMsg] = useState('')
+  const [, forceTick] = useState(0)
   const inputRef = useRef(null)
   const composerRef = useRef(null)
+  const toastTimer = useRef(null)
+
+  const ordersClosed = nowISTMinutes() >= CUTOFF_MIN
+
+  // Re-render once a minute so the panel flips to "closed" at 11:15
+  // even if the tab has been open since morning.
+  useEffect(() => {
+    const t = setInterval(() => forceTick((n) => n + 1), 60 * 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Show a rotating "closed" quip near the composer, auto-hide after 4s
+  const showClosed = () => {
+    setClosedMsg(CLOSED_LINES[Math.floor(Math.random() * CLOSED_LINES.length)])
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setClosedMsg(''), 4000)
+  }
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const meta = dayMeta[today] || { guest_count: 0, note: '' }
   const inSet = new Set(todayMemberIds)
@@ -21,7 +63,7 @@ export default function TodayPanel({ data }) {
 
   // Suggestions open when the text contains "@"; the query is what follows it
   const atIndex = text.lastIndexOf('@')
-  const open = atIndex !== -1
+  const open = atIndex !== -1 && !ordersClosed
   const query = open ? text.slice(atIndex + 1).trim().toLowerCase() : ''
 
   const suggestions = useMemo(() => {
@@ -43,6 +85,7 @@ export default function TodayPanel({ data }) {
 
   // Pick one member but KEEP the list open for the next pick
   const pick = (member) => {
+    if (nowISTMinutes() >= CUTOFF_MIN) { setText(''); showClosed(); return }
     addToday(member.id, member.name)
     setText('@')
     setHighlight(0)
@@ -50,9 +93,21 @@ export default function TodayPanel({ data }) {
   }
 
   const addAllRemaining = () => {
+    if (nowISTMinutes() >= CUTOFF_MIN) { setText(''); showClosed(); return }
     suggestions.forEach((m) => addToday(m.id, m.name))
     setText('')
     inputRef.current?.focus()
+  }
+
+  const tryCopyYesterday = () => {
+    if (nowISTMinutes() >= CUTOFF_MIN) { showClosed(); return }
+    copyYesterday()
+  }
+
+  const onInputChange = (e) => {
+    if (ordersClosed) { showClosed(); return }
+    setText(e.target.value)
+    setHighlight(0)
   }
 
   const onKeyDown = (e) => {
@@ -74,6 +129,9 @@ export default function TodayPanel({ data }) {
   }
 
   const bumpGuests = (delta) => {
+    // Adding guest plates is also an order — blocked after cutoff.
+    // Reducing is a correction — always allowed.
+    if (delta > 0 && nowISTMinutes() >= CUTOFF_MIN) { showClosed(); return }
     const next = Math.max(0, (meta.guest_count || 0) + delta)
     setMeta(today, { guest_count: next })
   }
@@ -82,7 +140,12 @@ export default function TodayPanel({ data }) {
     <section className={styles.panel} aria-label="Today's lunch">
       <div className={styles.headRow}>
         <h2 className={styles.heading}>Who's in for lunch today?</h2>
-        <button className={styles.copyBtn} onClick={copyYesterday}>
+        <button
+          className={styles.copyBtn}
+          onClick={tryCopyYesterday}
+          disabled={ordersClosed}
+          title={ordersClosed ? 'Orders closed for today' : undefined}
+        >
           Copy yesterday's list
         </button>
       </div>
@@ -92,13 +155,22 @@ export default function TodayPanel({ data }) {
           ref={inputRef}
           className={styles.input}
           value={text}
-          onChange={(e) => { setText(e.target.value); setHighlight(0) }}
+          onChange={onInputChange}
           onKeyDown={onKeyDown}
-          placeholder="Type @ once, then keep picking — e.g. @pri"
+          placeholder={
+            ordersClosed
+              ? 'Orders closed for today (11:15) — register reopens tomorrow'
+              : 'Type @ once, then keep picking — e.g. @pri'
+          }
+          disabled={ordersClosed}
           aria-label="Add members to today's lunch. Type @ to open the roster; it stays open so you can add several people."
           aria-expanded={open}
           autoComplete="off"
         />
+
+        {closedMsg && (
+          <div className={styles.closedToast} role="status">{closedMsg}</div>
+        )}
 
         {open && (
           <ul className={styles.dropdown} role="listbox">
@@ -138,7 +210,11 @@ export default function TodayPanel({ data }) {
 
       <div className={styles.chips}>
         {todayMembers.length === 0 && (
-          <p className={styles.emptyChips}>No one marked in yet. Type @ above to start the roll call.</p>
+          <p className={styles.emptyChips}>
+            {ordersClosed
+              ? 'No one made it onto the list today. The kitchen rests.'
+              : 'No one marked in yet. Type @ above to start the roll call.'}
+          </p>
         )}
         {todayMembers.map((m) => (
           <button
@@ -160,7 +236,14 @@ export default function TodayPanel({ data }) {
           <div className={styles.stepper}>
             <button onClick={() => bumpGuests(-1)} aria-label="One less guest plate">−</button>
             <span className={styles.guestCount}>{meta.guest_count || 0}</span>
-            <button onClick={() => bumpGuests(1)} aria-label="One more guest plate">+</button>
+            <button
+              onClick={() => bumpGuests(1)}
+              aria-label="One more guest plate"
+              disabled={ordersClosed}
+              title={ordersClosed ? 'Orders closed for today' : undefined}
+            >
+              +
+            </button>
           </div>
         </div>
 

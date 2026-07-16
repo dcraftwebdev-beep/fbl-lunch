@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       await postToBasecamp(
         `🔒 <b>Kitchen list locked for ${date}:</b> ${entries?.length ?? 0} plates ` +
         `(🟢 ${veg} veg / 🔴 ${nonveg} non-veg). ` +
-        `Late? <b>!lunch in</b> still works — the chef gets a +1.`
+        `Not in yet? You have until <b>11:15</b> — type <b>!lunch in</b> before the gate shuts.`
       )
     }
 

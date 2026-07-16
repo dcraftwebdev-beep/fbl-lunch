@@ -35,9 +35,14 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-.copyBtn:hover {
+.copyBtn:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+.copyBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* ---------- composer ---------- */
@@ -64,6 +69,38 @@
 
 .input::placeholder {
   color: #9aa59c;
+}
+
+.input:disabled {
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+/* ---------- "orders closed" toast ---------- */
+
+.closedToast {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 31;
+  background: var(--warning-soft, #fdf3e3);
+  border: 1px solid var(--warning, #e0a94e);
+  color: #8a5a1c;
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  animation: toastIn 0.18s ease-out;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .dropdown {
@@ -225,8 +262,13 @@
   color: var(--ink);
 }
 
-.stepper button:hover {
+.stepper button:hover:not(:disabled) {
   background: var(--primary-soft);
+}
+
+.stepper button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .guestCount {

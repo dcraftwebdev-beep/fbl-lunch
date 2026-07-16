@@ -1,22 +1,22 @@
 // basecamp-lunch — the Command URL behind the Basecamp "!lunch" chatbot.
 //
 // Commands (also works via single-word bots using ?do=in / ?do=out):
-//   !lunch in       → adds you to TODAY's register (before 11:30 IST)
-//   !lunch out      → cancels your plate (before 11:30 IST)
+//   !lunch in       → adds you to TODAY's register (before 11:15 IST)
+//   !lunch out      → cancels your plate (before 11:15 IST)
 //   !lunch          → today's count + whether you're in
 //   !lunch menu     → a funny non-answer (the chef keeps secrets)
 //   !lunch thanks / hi / anything else → the bot has jokes
 //
-// ORDER CUTOFF: 11:30 IST. After that, in/out are refused with a
+// ORDER CUTOFF: 11:15 IST. After that, in/out are refused with a
 // funny "time's up" line — the kitchen has already committed.
-// Between 11:00 (chef list) and 11:30, joins/cancels still send the
+// Between 11:00 (chef list) and 11:15, joins/cancels still send the
 // chef a +1/−1 mail as before.
 //
 // DEPLOY: config.toml entry with verify_jwt = false, then
 //         supabase functions deploy basecamp-lunch
 import { admin, sendEmail, shell, todayIST, chefListSent } from '../_shared/lib.js'
 
-const CUTOFF_MIN = 11 * 60 + 30 // 11:30 IST
+const CUTOFF_MIN = 11 * 60 + 15 // 11:15 IST
 
 const say = (html) =>
   new Response(html, {
@@ -34,17 +34,17 @@ const nowISTMinutes = () => {
 /* ---------------- the bot's personality ---------------- */
 
 const TIMES_UP_LINES = [
-  "Time's up buddy ⏰ The kitchen closed the gates at 11:30. Today you're on your own — tomorrow, type faster.",
-  "Nope. 11:30 came and went. The rice has already made its life decisions. See you tomorrow at 10.",
-  "The register is closed tighter than the office AC remote drawer. Cutoff was 11:30 — tomorrow, be early.",
-  "Kitchen says no. It's past 11:30 and the vessels are already on fire (the good kind). Tomorrow, champ.",
-  "Too late da. The chef counts plates, not feelings. Order window closed at 11:30 sharp.",
+  "Time's up buddy ⏰ The kitchen closed the gates at 11:15. Today you're on your own — tomorrow, type faster.",
+  "Nope. 11:15 came and went. The rice has already made its life decisions. See you tomorrow at 10.",
+  "The register is closed tighter than the office AC remote drawer. Cutoff was 11:15 — tomorrow, be early.",
+  "Kitchen says no. It's past 11:15 and the vessels are already on fire (the good kind). Tomorrow, champ.",
+  "Too late da. The chef counts plates, not feelings. Order window closed at 11:15 sharp.",
 ]
 
 const NO_CANCEL_LINES = [
-  "Can't cancel now — it's past 11:30 and your plate is already becoming food. Eat it with pride. 🍛",
+  "Can't cancel now — it's past 11:15 and your plate is already becoming food. Eat it with pride. 🍛",
   "The kitchen has already committed to your plate. Cancelling now would break the chef's heart AND the count.",
-  "Past 11:30, cancellations go straight to /dev/null. Your lunch is happening. Enjoy it.",
+  "Past 11:15, cancellations go straight to /dev/null. Your lunch is happening. Enjoy it.",
 ]
 
 const THANKS_LINES = [
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       return say(pick(HELLO_LINES))
     }
     if (/^help$/.test(cmd)) {
-      return say('Commands: <b>!lunch in</b> (grab a plate), <b>!lunch out</b> (cancel), <b>!lunch</b> (today\'s count). Orders close at <b>11:30</b>.')
+      return say('Commands: <b>!lunch in</b> (grab a plate), <b>!lunch out</b> (cancel), <b>!lunch</b> (today\'s count). Orders close at <b>11:15</b>.')
     }
 
     const db = admin()
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
         .select('*', { count: 'exact', head: true })
         .eq('lunch_date', date)
 
-      const cutoffNote = pastCutoff ? ' Orders are closed for today (11:30 passed).' : ' Orders close at 11:30.'
+      const cutoffNote = pastCutoff ? ' Orders are closed for today (11:15 passed).' : ' Orders close at 11:15.'
       return say(
         `Today (${date}): <b>${count}</b> plates.` +
         (existing

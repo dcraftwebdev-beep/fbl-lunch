@@ -32,3 +32,6 @@ verify_jwt = false
 entrypoint = "./functions/basecamp-lunch/index.js"
 # Basecamp sends no Supabase auth header:
 verify_jwt = false
+
+[functions.last-call]
+entrypoint = "./functions/last-call/index.js"
