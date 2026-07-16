@@ -8,6 +8,7 @@ export default function MembersPanel({ data }) {
   const [pref, setPref] = useState('veg')
   const [confirmId, setConfirmId] = useState(null)   // member awaiting delete confirmation
   const [emailEditId, setEmailEditId] = useState(null) // member whose email is being edited
+  const [nameEditId, setNameEditId] = useState(null)   // member whose name is being edited
 
   const submit = () => {
     const clean = name.trim()
@@ -27,13 +28,25 @@ export default function MembersPanel({ data }) {
     setEmailEditId(null)
   }
 
+  const saveName = (m, value) => {
+    const clean = value.trim()
+    // Ignore empty, unchanged, or a name another member already has
+    const taken = members.some(
+      (x) => x.id !== m.id && x.name.toLowerCase() === clean.toLowerCase()
+    )
+    if (clean && clean !== m.name && !taken) {
+      updateMember(m.id, { name: clean })
+    }
+    setNameEditId(null)
+  }
+
   return (
     <section className={styles.panel} aria-label="Team roster">
       <h2 className={styles.heading}>Team roster</h2>
       <p className={styles.sub}>
         Everyone here appears in the @ roll call. Emails power the confirmation,
-        cancel-link and daily mails. Mark someone as left to keep their history,
-        or remove them to delete their history too.
+        cancel-link and daily mails. Click a name or email to edit it. Mark someone
+        as left to keep their history, or remove them to delete their history too.
       </p>
 
       <div className={styles.addRow}>
@@ -84,7 +97,27 @@ export default function MembersPanel({ data }) {
             <span className={m.food_pref === 'veg' ? styles.dotVeg : styles.dotNonveg} aria-hidden="true" />
 
             <span className={styles.rowMain}>
-              <span className={styles.rowName}>{m.name}</span>
+              {nameEditId === m.id ? (
+                <input
+                  className={styles.rowNameInput}
+                  defaultValue={m.name}
+                  autoFocus
+                  placeholder="Member name"
+                  onBlur={(e) => saveName(m, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveName(m, e.target.value)
+                    if (e.key === 'Escape') setNameEditId(null)
+                  }}
+                />
+              ) : (
+                <button
+                  className={styles.rowNameBtn}
+                  onClick={() => setNameEditId(m.id)}
+                  title="Click to edit name"
+                >
+                  {m.name}
+                </button>
+              )}
               {emailEditId === m.id ? (
                 <input
                   className={styles.rowEmailInput}
