@@ -17,8 +17,13 @@ entrypoint = "./functions/cancel-lunch/index.js"
 # The cancel link in emails must work without login:
 verify_jwt = false
 
-[functions.morning-invite]
-entrypoint = "./functions/morning-invite/index.js"
+# morning-invite is RETIRED — replaced by the 5 PM evening-invite below.
+
+[functions.evening-invite]
+entrypoint = "./functions/evening-invite/index.js"
+
+[functions.weekend-funny]
+entrypoint = "./functions/weekend-funny/index.js"
 
 [functions.midday-confirm]
 entrypoint = "./functions/midday-confirm/index.js"

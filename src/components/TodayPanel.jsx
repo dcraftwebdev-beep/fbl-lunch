@@ -6,28 +6,28 @@ import styles from './TodayPanel.module.css'
  * add several people in a row. "Add everyone remaining" fills the rest.
  * Click outside or press Escape to close.
  *
- * ORDER CUTOFF — 11:15 IST: after that, the list is with the kitchen,
- * so BOTH directions lock. Adding (composer, add-all, copy-yesterday,
- * guest +) gets a "see you tomorrow" quip; removing (chips, guest −)
- * gets a "food will go to waste" quip. Corrections after 11:15 go
- * through the register table below (admin override).
+ * ORDER CUTOFF — 6:30 PM IST: the order window runs 5:00–6:30 PM the
+ * evening before. After 6:30 PM BOTH directions lock. Adding
+ * (composer, add-all, copy-yesterday, guest +) gets a "window closed"
+ * quip; removing (chips, guest −) gets a "food will go to waste"
+ * quip. Corrections after 6:30 PM go through the register table
+ * below (admin override).
  */
 
-const CUTOFF_MIN = 11 * 60 + 15 // 11:15 IST
+const CUTOFF_MIN = 18 * 60 + 30 // 6:30 PM IST
 
 const CLOSED_LINES = [
-  "Today's order time is over ⏰ The kitchen has locked the count. See you tomorrow at 10!",
-  'Register closed for today. The rice has entered its no-refunds phase. Tomorrow, be quick!',
-  "Too late for today — the chef is already mid-tadka. Fresh chances open tomorrow morning.",
-  'Orders closed at 11:15. Time flies, plates get counted. Catch the register tomorrow!',
-  "The 11:15 gate has shut. Today's lunch is destiny now. See you tomorrow, early bird.",
+  'Order time over ⏰ Window: 5:00–6:30 PM.',
+  'Register closed. Next window: 5:00 PM.',
+  'Locked at 6:30 PM. Be quicker next time!',
+  'Closed. The rice has a no-refunds policy. 🍚',
 ]
 
 const NO_REMOVE_LINES = [
-  "Can't remove now — the list already went to the kitchen and that plate is being cooked. Removing it = food waste, and we don't do that here. 🍛",
-  'Too late to pull a plate — the chef is already cooking to the count. That food would go to waste. It stays.',
-  "The kitchen has this list since 11:15. Cancelling now wastes a cooked plate — better someone eats it. No removals.",
-  "Plate's already in progress. Removing it now just wastes good food. If it's a genuine mistake, fix it in the register table below.",
+  "Can't remove — plate's being cooked. No food waste. 🍛",
+  'Too late to pull a plate. It stays.',
+  'Locked since 6:30 PM. No removals.',
+  'Genuine mistake? Fix it in the register table below.',
 ]
 
 // Minutes since midnight in IST, regardless of the device's timezone
@@ -49,8 +49,8 @@ export default function TodayPanel({ data }) {
 
   const ordersClosed = nowISTMinutes() >= CUTOFF_MIN
 
-  // Re-render once a minute so the panel flips to "closed" at 11:15
-  // even if the tab has been open since morning.
+  // Re-render once a minute so the panel flips to "closed" at 6:30 PM
+  // even if the tab has been open all day.
   useEffect(() => {
     const t = setInterval(() => forceTick((n) => n + 1), 60 * 1000)
     return () => clearInterval(t)
@@ -177,7 +177,7 @@ export default function TodayPanel({ data }) {
           onKeyDown={onKeyDown}
           placeholder={
             ordersClosed
-              ? 'Orders closed for today (11:15) — register reopens tomorrow'
+              ? 'Orders closed (6:30 PM) — window reopens at 5:00 PM'
               : 'Type @ once, then keep picking — e.g. @pri'
           }
           disabled={ordersClosed}

@@ -55,14 +55,27 @@ Opens at http://localhost:5173
 ## Email system (Resend + Edge Functions)
 
 All mail goes out as **Firebrand Lunch <lunch@firebrandlabs.in>** via Resend.
-Four flows, all included in `supabase/functions/`:
+
+**EVENING ORDERING FLOW (lunch days: Mon–Fri):** lunch is ordered the evening
+before, inside a strict **order window: 5:00–6:30 PM IST, Sun–Thu**. The 5 PM
+invite opens tomorrow's register (email button + Basecamp `!lunch in`) —
+Sunday's window orders for Monday. At 6:15 PM a last call fires; at 6:30 PM
+the window closes and no joins or cancels are possible anywhere (email links,
+Basecamp bot, everything). Friday 5 PM sends only a funny "kitchen closed,
+see you Monday" message; Saturday nothing goes out. The dashboard's today
+panel locks at 6:30 PM.
 
 | Flow | Function | When |
 |---|---|---|
-| Chef gets the day's list (count, names, veg/non-veg, guests, note) | `send-chef-list` | Cron 11:00 IST Mon–Sat, or the dashboard button any time |
-| Member confirmation with a one-click **Cancel my lunch** button | `notify-change` | The moment they're marked in for today |
-| Chef +1 / −1 updates for joins and cancels after the 11:00 list | `notify-change` / `cancel-lunch` | Automatic |
-| Daily funny mail — banter for skippers, motivation for orderers, rotating lines | `daily-funny` | Cron 11:15 IST Mon–Sat |
+| Evening invite — "Lunch tomorrow?" one-click button + Basecamp announcement | `evening-invite` | Cron 17:00 IST Sun–Thu (window opens) |
+| Last-call reminder in Basecamp — 15 minutes to close | `last-call` | Cron 18:15 IST Sun–Thu |
+| Weekend funny — "kitchen closed, see you Monday" mail + Basecamp post | `weekend-funny` | Cron 17:00 IST Friday |
+| Chef gets the day's list (count, names, veg/non-veg, guests, note) | `send-chef-list` | Cron 11:00 IST Mon–Fri, or the dashboard button any time |
+| Member confirmations for everyone on today's register (plate locked) | `midday-confirm` | Cron 11:01 IST Mon–Fri |
+| Member confirmation with a one-click **Cancel my lunch** button (valid till 6:30 PM) | `notify-change` | The moment they're marked in |
+| Daily funny mail — banter for skippers, motivation for orderers, rotating lines | `daily-funny` | Cron 11:15 IST Mon–Fri |
+
+> `morning-invite` (10 AM same-day invite) is retired — replaced by `evening-invite`.
 
 ### Deploy steps (one time, ~15 minutes)
 

@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
         `<p>Hi ${m.name},</p>
          <p style="font-size:16px">${line}</p>
          ${ordered
-            ? '<p style="color:#5a645c;font-size:13px">Your plate is being cooked in the office today. Carry on.</p>'
-            : '<p style="color:#5a645c;font-size:13px">Not on today\'s list. Tomorrow, type @ on the lunch dashboard before 11:00 and redemption is yours.</p>'}`
+            ? '<p style="color:#5a645c;font-size:13px">Plate\'s cooking. Carry on. 🍛</p>'
+            : '<p style="color:#5a645c;font-size:13px">Book tomorrow: 5:00–6:30 PM this evening.</p>'}`
       )
 
       try {

@@ -36,6 +36,45 @@ export async function sendEmail(to, subject, html) {
 export const todayIST = () =>
   new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
 
+// Tomorrow's date in IST — used by the 5 PM evening invite flow
+export const tomorrowIST = () =>
+  new Date(Date.now() + (24 + 5.5) * 3600 * 1000).toISOString().slice(0, 10)
+
+// Next WORKING lunch day in IST (lunch runs Mon–Fri; Sat & Sun are off).
+// From Sun–Thu → tomorrow. From Fri (or the weekend) → Monday.
+export const nextLunchDateIST = () => {
+  const d = new Date(Date.now() + 5.5 * 3600 * 1000)
+  d.setUTCDate(d.getUTCDate() + 1)
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+// Is it currently the weekend in IST?
+export const isWeekendIST = () => {
+  const wd = new Date(Date.now() + 5.5 * 3600 * 1000).getUTCDay()
+  return wd === 0 || wd === 6
+}
+
+/* ---------------- order window ---------------- */
+// Lunch is ordered the EVENING BEFORE, between 5:00 PM and 6:30 PM IST,
+// Sunday–Thursday (each window orders for the next working day).
+// Outside the window the register is closed — no joins, no cancels.
+
+export const ORDER_OPEN_MIN = 17 * 60        // 5:00 PM IST
+export const ORDER_CLOSE_MIN = 18 * 60 + 30  // 6:30 PM IST
+
+export const nowISTMinutes = () => {
+  const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes()
+}
+
+export const orderWindowOpen = () => {
+  const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
+  const wd = ist.getUTCDay() // Sun=0 … Sat=6; window days are Sun–Thu
+  const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes()
+  return wd <= 4 && mins >= ORDER_OPEN_MIN && mins < ORDER_CLOSE_MIN
+}
+
 export const dayOfYear = () => {
   const now = new Date(Date.now() + 5.5 * 3600 * 1000)
   return Math.floor(

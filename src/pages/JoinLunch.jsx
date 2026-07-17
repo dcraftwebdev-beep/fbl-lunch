@@ -95,7 +95,7 @@ export default function JoinLunch() {
             <div className={`${styles.badge} ${styles.badgeBad}`} aria-hidden="true" />
             <h1 className={styles.title}>That didn't go through</h1>
             <p className={styles.msg}>
-              {result?.message || 'This link may have expired. Ask the register admin to add you, or wait for tomorrow\u2019s 10 AM email.'}
+              {result?.message || 'Link expired? Window is 5:00\u20136:30 PM. Wait for the next 5 PM email.'}
             </p>
             <button className={styles.ghostBtn} onClick={confirm} type="button">Try again</button>
           </>

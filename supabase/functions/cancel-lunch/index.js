@@ -12,7 +12,7 @@
 // After deploying with the flag, confirm in Dashboard → Edge Functions
 // → cancel-lunch → Details that "Verify JWT" shows OFF.
 // ─────────────────────────────────────────────────────────────────────
-import { admin, sendEmail, shell, todayIST, htmlPage, chefListSent } from '../_shared/lib.js'
+import { admin, sendEmail, shell, todayIST, nextLunchDateIST, orderWindowOpen, htmlPage, chefListSent } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   // Email scanners prefetch links with HEAD — answer empty, cancel
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   try {
     const token = new URL(req.url).searchParams.get('token')
     if (!token) {
-      return htmlPage('Missing link', 'This cancel link is incomplete. Open the button from your email again.', false)
+      return htmlPage('Missing link', 'Open the button from your email again.', false)
     }
 
     const db = admin()
@@ -35,10 +35,13 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (!entry) {
-      return htmlPage('Already cancelled', 'This lunch was already cancelled, or the link has expired. Nothing more to do.', true)
+      return htmlPage('Already cancelled', 'Nothing more to do.', true)
     }
-    if (entry.lunch_date !== date) {
-      return htmlPage('Link expired', "This cancel link was for a past day. Today's lunch is managed on the dashboard.", false)
+    // Cancelling is allowed ONLY while the order window is open
+    // (5:00–6:30 PM the evening before) and only for the upcoming
+    // lunch day. After 6:30 PM the plate is locked.
+    if (!(entry.lunch_date === nextLunchDateIST() && orderWindowOpen())) {
+      return htmlPage('Too late to cancel', 'Window (5:00–6:30 PM) closed — plate is locked and will be cooked. 🍛', false)
     }
 
     const { data: member } = await db.from('members').select('name, food_pref').eq('id', entry.member_id).single()
@@ -61,10 +64,10 @@ Deno.serve(async (req) => {
 
     return htmlPage(
       `Lunch cancelled, ${member?.name ?? 'done'}`,
-      'Your plate for today is off the list and the kitchen has been told. Changed your mind? The 10 AM email button or the register admin can add you back.'
+      'Plate is off the list. Rebook via the 5 PM email till 6:30 PM.'
     )
   } catch (err) {
     console.error(err)
-    return htmlPage('Something went wrong', 'The cancel did not go through. Try the link once more, or tell the register admin.', false)
+    return htmlPage('Something went wrong', 'Try the link once more.', false)
   }
 })

@@ -53,20 +53,12 @@ Deno.serve(async (req) => {
       const cancelUrl = `${app}/cancel?token=${entry.cancel_token}`
       const html = shell(
         "You're in for lunch today 🍛",
-        `<p>Hi ${m.name},</p>
-         <p>Confirmed — the office kitchen is cooking your
-            <b>${m.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate today (${date}).</p>
+        `<p>Hi ${m.name} — your <b>${m.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate is confirmed for today (${date}).</p>
          <p style="background:#f6f7f2;border-left:3px solid #1f5c38;padding:10px 14px;border-radius:0 8px 8px 0;color:#1c221d">${quip}</p>
-         <p>Plans changed? Cancel before the cooking starts:</p>
          <p style="margin:20px 0">
-           <a href="${cancelUrl}"
-              style="background:#c03b2b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">
-              Cancel my lunch today</a>
-           &nbsp;&nbsp;
            <a href="${gcalLunchLink(date)}"
               style="background:#ffffff;color:#1f5c38;border:2px solid #1f5c38;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:bold">
-              Add to my calendar 📅</a></p>
-         <p style="color:#5a645c;font-size:13px">The link works for today only. If you do nothing, your plate will be cooked.</p>`
+              Add to my calendar 📅</a></p>`
       )
 
       await sendEmail(m.email, `You're in for lunch today (${date})`, html)
@@ -78,9 +70,7 @@ Deno.serve(async (req) => {
       const veg = (entries ?? []).filter((e) => e.members?.food_pref === 'veg').length
       const nonveg = (entries ?? []).length - veg
       await postToBasecamp(
-        `🔒 <b>Kitchen list locked for ${date}:</b> ${entries?.length ?? 0} plates ` +
-        `(🟢 ${veg} veg / 🔴 ${nonveg} non-veg). ` +
-        `Not in yet? You have until <b>11:15</b> — type <b>!lunch in</b> before the gate shuts.`
+        `🔒 <b>${date}: ${entries?.length ?? 0} plates</b> (🟢 ${veg} / 🔴 ${nonveg}). Missed it? Tonight <b>5:00–6:30 PM</b> for tomorrow.`
       )
     }
 

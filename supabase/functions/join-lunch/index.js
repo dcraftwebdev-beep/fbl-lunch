@@ -1,7 +1,8 @@
-// join-lunch — the public link behind the 10:00 invite button.
+// join-lunch — the public link behind the 5 PM evening invite button.
 // GET ?m=<member_id>&d=<date>&s=<hmac>  → verifies the signed link,
-// inserts today's lunch entry (idempotent), tells the chef (+1) if the
-// 11:00 list already went out, and shows a friendly HTML page.
+// inserts the lunch entry for that date — TOMORROW from the evening
+// invite, or today for same-day links (idempotent), tells the chef
+// (+1) if the 11:00 list already went out, and shows a friendly page.
 //
 // DEPLOY WITH:  supabase functions deploy join-lunch --no-verify-jwt
 // (the button opens in a plain browser with no auth header — without
@@ -10,7 +11,8 @@ import {
   admin,
   sendEmail,
   shell,
-  todayIST,
+  nextLunchDateIST,
+  orderWindowOpen,
   htmlPage,
   verifyJoin,
   chefListSent,
@@ -28,14 +30,18 @@ Deno.serve(async (req) => {
     const sig = url.searchParams.get('s')
 
     if (!memberId || !date || !sig) {
-      return htmlPage('Broken link', 'This lunch link is incomplete. Open the button from your email again.', false)
+      return htmlPage('Broken link', 'Open the button from your email again.', false)
     }
     if (!(await verifyJoin(memberId, date, sig))) {
-      return htmlPage('Invalid link', 'This lunch link is not valid. Use the button from today\'s email.', false)
+      return htmlPage('Invalid link', 'Use the button from the latest email.', false)
     }
-    if (date !== todayIST()) {
-      return htmlPage('Link expired', 'This button was for a previous day. Wait for today\'s 10 AM email, or ask the register admin to add you.', false)
+    if (date !== nextLunchDateIST()) {
+      return htmlPage('Link expired', 'Old link. Wait for the next 5 PM email.', false)
     }
+    if (!orderWindowOpen()) {
+      return htmlPage('Ordering closed', 'Window is 5:00–6:30 PM. Closed for this lunch.', false)
+    }
+    const dayWord = 'tomorrow'
 
     const db = admin()
 
@@ -46,7 +52,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (!member || !member.active) {
-      return htmlPage('Not on the roster', 'This account is not on the active roster. Ask the register admin to add you back.', false)
+      return htmlPage('Not on the roster', 'Ask the register admin to add you back.', false)
     }
 
     // Already in? Say so warmly, change nothing.
@@ -58,10 +64,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (existing) {
-      return htmlPage(
-        `Already on the list, ${member.name}`,
-        'Your plate for today was already marked. The kitchen has you covered — nothing more to do.'
-      )
+      return htmlPage(`Already on the list, ${member.name}`, `Your ${dayWord} plate (${date}) is already marked. 🍛`)
     }
 
     const { error: insErr } = await db
@@ -86,10 +89,10 @@ Deno.serve(async (req) => {
 
     return htmlPage(
       `You're in, ${member.name} 🍛`,
-      `Your ${member.food_pref === 'veg' ? 'veg' : 'non-veg'} plate for today is on the register. A confirmation with a cancel button lands in your inbox at 11 — plans change, no stress.`
+      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for ${dayWord} (${date}).`
     )
   } catch (err) {
     console.error(err)
-    return htmlPage('Something went wrong', 'That click did not go through. Try the button once more, or tell the register admin.', false)
+    return htmlPage('Something went wrong', 'Try the button once more.', false)
   }
 })

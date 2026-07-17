@@ -80,8 +80,8 @@ export default function CancelLunch() {
             </h1>
             <p className={styles.msg}>
               {result?.status === 'already'
-                ? 'This lunch was already cancelled, or the link has expired. Nothing more to do.'
-                : 'Your plate for today is off the list and the kitchen has been told. The 10 AM email button or the register admin can add you back.'}
+                ? 'Already cancelled. Nothing more to do.'
+                : 'Plate is off the list. Rebook via the 5 PM email till 6:30 PM.'}
             </p>
           </>
         )}
