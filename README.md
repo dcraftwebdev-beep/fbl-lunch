@@ -8,6 +8,28 @@ Built with React + Vite, CSS Modules, and Supabase. No Tailwind, no Next.js.
 
 ---
 
+## Login (shared team password)
+
+The dashboard is gated behind a single team password so not just anyone
+with the link can open it. Set it in `.env`:
+
+```
+VITE_APP_PASSWORD=your-team-password
+```
+
+Change it before sharing the link; change it again to lock everyone out.
+If it's left unset, a default is used and the login screen warns you to
+set one. Auth is remembered per browser and there's a **Log out** button
+in the header. The public one-click email pages (`/join`, `/cancel`) are
+intentionally NOT gated — those links must work straight from an inbox
+without a password.
+
+> This is a lightweight client-side gate for an internal tool — it keeps
+> casual visitors out. For per-person accounts you can revoke individually,
+> switch to Supabase Auth later.
+
+---
+
 ## Run it right now (demo mode)
 
 The app works straight out of the zip — no Supabase needed. Without keys it runs
@@ -61,19 +83,32 @@ before, inside a strict **order window: 5:00–6:30 PM IST, Sun–Thu**. The 5 P
 invite opens tomorrow's register (email button + Basecamp `!lunch in`) —
 Sunday's window orders for Monday. At 6:15 PM a last call fires; at 6:30 PM
 the window closes and no joins or cancels are possible anywhere (email links,
-Basecamp bot, everything). Friday 5 PM sends only a funny "kitchen closed,
-see you Monday" message; Saturday nothing goes out. The dashboard's today
-panel locks at 6:30 PM.
+Basecamp bot, everything). **The moment the window closes at 6:30 PM the chef
+gets the finalised list for the next day** — the plates just ordered. Friday
+5 PM sends only a funny "kitchen closed, see you Monday" message; Saturday
+nothing goes out. The dashboard's today panel locks at 6:30 PM.
 
 | Flow | Function | When |
 |---|---|---|
 | Evening invite — "Lunch tomorrow?" one-click button + Basecamp announcement | `evening-invite` | Cron 17:00 IST Sun–Thu (window opens) |
 | Last-call reminder in Basecamp — 15 minutes to close | `last-call` | Cron 18:15 IST Sun–Thu |
 | Weekend funny — "kitchen closed, see you Monday" mail + Basecamp post | `weekend-funny` | Cron 17:00 IST Friday |
-| Chef gets the day's list (count, names, veg/non-veg, guests, note) | `send-chef-list` | Cron 11:00 IST Mon–Fri, or the dashboard button any time |
+| Chef gets the next day's final list (count, names, veg/non-veg, guests, note) | `send-chef-list` | Cron **18:30 IST Sun–Thu** (window just closed), or the dashboard button any time (sends today's list on demand) |
 | Member confirmations for everyone on today's register (plate locked) | `midday-confirm` | Cron 11:01 IST Mon–Fri |
 | Member confirmation with a one-click **Cancel my lunch** button (valid till 6:30 PM) | `notify-change` | The moment they're marked in |
 | Daily funny mail — banter for skippers, motivation for orderers, rotating lines | `daily-funny` | Cron 11:15 IST Mon–Fri |
+
+### About the Basecamp auto-messages (Campfire)
+
+The `!lunch` bot only *replies* to what people type. The messages that
+appear on their own — the 5 PM "register open", the 6:15 PM last call, the
+Friday "kitchen closed" — are posted by the scheduled functions above via
+`postToBasecamp`. For them to fire, two things must be true: the crons in
+`supabase/cron-ready.sql` are scheduled, **and** the `BASECAMP_CHAT_URL`
+secret is set to the chatbot's `.../lines` URL
+(`supabase secrets set BASECAMP_CHAT_URL=...`). If auto-messages aren't
+showing up, that secret or those crons are the usual cause — the bot code
+itself is fine.
 
 > `morning-invite` (10 AM same-day invite) is retired — replaced by `evening-invite`.
 
@@ -118,7 +153,7 @@ panel locks at 6:30 PM.
 
 Test it: mark yourself in, and you should receive the confirmation mail with
 the cancel button within seconds. Click "Send today's list now" to test the
-chef mail without waiting for 11:00.
+chef mail without waiting for the 6:30 PM auto-send.
 
 ---
 

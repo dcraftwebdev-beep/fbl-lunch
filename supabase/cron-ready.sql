@@ -19,7 +19,8 @@
 -- Times are UTC (IST = UTC + 5:30):
 --   11:30 UTC = 17:00 IST → evening invite (Sun–Thu) / weekend funny (Fri)
 --   12:45 UTC = 18:15 IST → last call in Basecamp (Sun–Thu)
---   05:30 UTC = 11:00 IST → chef list (Mon–Fri)
+--   13:00 UTC = 18:30 IST → chef list for NEXT day — window just
+--                           closed, orders are final (Sun–Thu)
 --   05:31 UTC = 11:01 IST → member confirmations (Mon–Fri)
 --   05:45 UTC = 11:15 IST → daily funny mails (Mon–Fri)
 -- ============================================================
@@ -33,6 +34,7 @@ declare j text;
 begin
   foreach j in array array[
     'lunch-chef-list-11am-ist',
+    'lunch-chef-list-630pm-ist',
     'lunch-daily-funny-1115am-ist',
     'lunch-last-call-1110am-ist',
     'lunch-morning-invite-10am-ist',
@@ -81,10 +83,13 @@ select cron.schedule(
   $$
 );
 
--- ---- 11:00 IST, Mon–Fri: chef gets today's list ----
+-- ---- 18:30 IST, Sun–Thu: chef gets the NEXT day's final list ----
+-- Fires the moment the 5:00–6:30 PM order window closes, so the plates
+-- just booked (tomorrow's lunch; Sunday's run = Monday) go straight to
+-- the kitchen. target=next tells the function to use the next lunch day.
 select cron.schedule(
-  'lunch-chef-list-11am-ist',
-  '30 5 * * 1-5',
+  'lunch-chef-list-630pm-ist',
+  '0 13 * * 0-4',
   $$
   select net.http_post(
     url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/send-chef-list',
@@ -92,7 +97,7 @@ select cron.schedule(
       'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cXJkZHVtcmZibGpxbWFraXZ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDAwMjY3NiwiZXhwIjoyMDk5NTc4Njc2fQ.d4jmYhaSxls0sfyd54HeN69YGjvzbVa-tBTsFZ-hgxk',
       'Content-Type',  'application/json'
     ),
-    body := '{}'::jsonb
+    body := '{"target":"next"}'::jsonb
   );
   $$
 );

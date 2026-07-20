@@ -68,6 +68,29 @@
   color: #cfe0d5;
 }
 
+.rightRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: transparent;
+  border: 1px solid rgba(246, 247, 242, 0.4);
+  color: #f6f7f2;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.logout:hover {
+  background: rgba(246, 247, 242, 0.14);
+  border-color: rgba(246, 247, 242, 0.7);
+}
+
 .pillLive,
 .pillDemo {
   font-family: var(--font-mono);

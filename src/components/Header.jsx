@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import styles from './Header.module.css'
 
-export default function Header({ live }) {
+export default function Header({ live, onLogout }) {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -17,9 +17,16 @@ export default function Header({ live }) {
 
         <div className={styles.right}>
           <p className={styles.date}>{format(new Date(), 'EEEE, dd MMM yyyy')}</p>
-          <span className={live ? styles.pillLive : styles.pillDemo}>
-            {live ? 'Supabase · live' : 'Demo mode'}
-          </span>
+          <div className={styles.rightRow}>
+            <span className={live ? styles.pillLive : styles.pillDemo}>
+              {live ? 'Supabase · live' : 'Demo mode'}
+            </span>
+            {onLogout && (
+              <button className={styles.logout} onClick={onLogout} type="button">
+                Log out
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>

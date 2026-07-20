@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import styles from './App.module.css'
 import { useLunchData } from './hooks/useLunchData'
 import { isLive } from './lib/store'
+import { isAuthed, logout } from './lib/auth'
+import Login from './components/Login'
 import Header from './components/Header'
 import TodayPanel from './components/TodayPanel'
 import StatsRow from './components/StatsRow'
@@ -13,6 +15,7 @@ import Toast from './components/Toast'
 
 export default function App() {
   const [toast, setToast] = useState(null)
+  const [authed, setAuthed] = useState(isAuthed)
 
   const notify = useCallback((message, tone = 'ok') => {
     setToast({ message, tone, key: Date.now() })
@@ -20,9 +23,11 @@ export default function App() {
 
   const data = useLunchData(notify)
 
+  if (!authed) return <Login onSuccess={() => setAuthed(true)} />
+
   return (
     <div className={styles.page}>
-      <Header live={isLive} />
+      <Header live={isLive} onLogout={() => { logout(); setAuthed(false) }} />
 
       <main className={styles.main}>
         {data.error && <div className={styles.errorBar} role="alert">{data.error}</div>}
