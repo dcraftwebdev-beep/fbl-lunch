@@ -1,269 +1,168 @@
-// ============================================================
-// Data layer for the Lunch Register.
-//
-// If VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY are set in .env,
-// everything reads/writes Supabase (see supabase/schema.sql).
-//
-// If they are NOT set, the app runs in Demo mode on localStorage
-// with a seeded roster — so the project works straight out of
-// the zip. Add your .env and restart to go live.
-// ============================================================
+import { useState } from 'react'
+import styles from './Login.module.css'
+import { login, resetPassword, USING_DEFAULT_PASSWORD } from '../lib/auth'
+import { isLive } from '../lib/store'
 
-import { createClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const isLive = Boolean(SUPABASE_URL && SUPABASE_KEY)
-
-/* ----------------------------- Supabase ----------------------------- */
-
-const supabase = isLive ? createClient(SUPABASE_URL, SUPABASE_KEY) : null
-
-// Exposed so the login gate (src/lib/auth.js) can call the
-// dashboard-auth edge function. Null in demo mode.
-export const supabaseClient = supabase
-
-const supabaseStore = {
-  async listMembers() {
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .order('created_at', { ascending: true })
-    if (error) throw error
-    return data
-  },
-
-  async addMember(name, food_pref, email = '') {
-    const { data, error } = await supabase
-      .from('members')
-      .insert({ name, food_pref, email })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async updateMember(id, fields) {
-    const { data, error } = await supabase
-      .from('members')
-      .update(fields)
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async deleteMember(id) {
-    // lunch_entries rows cascade-delete via the FK in schema.sql
-    const { error } = await supabase.from('members').delete().eq('id', id)
-    if (error) throw error
-  },
-
-  async getEntries(from, to) {
-    const { data, error } = await supabase
-      .from('lunch_entries')
-      .select('member_id, lunch_date')
-      .gte('lunch_date', from)
-      .lte('lunch_date', to)
-    if (error) throw error
-    return data
-  },
-
-  async addEntry(member_id, lunch_date) {
-    const { error } = await supabase
-      .from('lunch_entries')
-      .upsert({ member_id, lunch_date }, { onConflict: 'member_id,lunch_date', ignoreDuplicates: true })
-    if (error) throw error
-  },
-
-  async removeEntry(member_id, lunch_date) {
-    const { error } = await supabase
-      .from('lunch_entries')
-      .delete()
-      .eq('member_id', member_id)
-      .eq('lunch_date', lunch_date)
-    if (error) throw error
-  },
-
-  async getDayMeta(from, to) {
-    const { data, error } = await supabase
-      .from('day_meta')
-      .select('*')
-      .gte('lunch_date', from)
-      .lte('lunch_date', to)
-    if (error) throw error
-    return data
-  },
-
-  async setDayMeta(lunch_date, fields) {
-    const { error } = await supabase
-      .from('day_meta')
-      .upsert({ lunch_date, ...fields }, { onConflict: 'lunch_date' })
-    if (error) throw error
-  },
-
-  async getSettings() {
-    const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
-    if (error) throw error
-    return data || { chef_name: '', chef_email: '', chef_photo: '', cutoff: '11:00' }
-  },
-
-  async updateSettings(fields) {
-    const { error } = await supabase.from('app_settings').upsert({ id: 1, ...fields })
-    if (error) throw error
-  },
-
-  // Fire the +1/-1 + confirmation emails. Fire-and-forget from the UI.
-  async notifyChange(member_id, action) {
-    const { data, error } = await supabase.functions.invoke('notify-change', { body: { member_id, action } })
-    if (error) throw error
-    return data
-  },
-
-  // Send (or resend, updated) today's list to the chef.
-  async sendChefList() {
-    const { data, error } = await supabase.functions.invoke('send-chef-list', { body: { force: true } })
-    if (error) throw error
-    return data
-  },
+// Inline eye / eye-off icons so we don't pull in an icon lib here.
+function EyeIcon({ off }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {off ? (
+        <>
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.5 18.5 0 0 0 2 12s3 8 10 8a9.12 9.12 0 0 0 5.39-1.61" />
+          <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+          <line x1="2" y1="2" x2="22" y2="22" />
+        </>
+      ) : (
+        <>
+          <path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8Z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+    </svg>
+  )
 }
 
-/* --------------------------- Demo (local) --------------------------- */
+/**
+ * Shared-password gate. When Supabase is connected the password is
+ * verified server-side (edge function). Includes a show/hide eye
+ * toggle and an in-app "change password" (reset) panel.
+ */
+export default function Login({ onSuccess }) {
+  const [pw, setPw] = useState('')
+  const [show, setShow] = useState(false)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [mode, setMode] = useState('login') // 'login' | 'reset'
 
-const LS_KEY = 'fbl-lunch-register-v1'
+  // reset panel state
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [resetMsg, setResetMsg] = useState('')
 
-const seedDb = () => {
-  const names = [
-    ['Arjun', 'nonveg'],
-    ['Priya', 'veg'],
-    ['Karthik', 'nonveg'],
-    ['Divya', 'veg'],
-    ['Sanjay', 'veg'],
-    ['Meera', 'nonveg'],
-  ]
-  const members = names.map(([name, food_pref], i) => ({
-    id: `demo-${i + 1}`,
-    name,
-    food_pref,
-    email: '',
-    active: true,
-    created_at: new Date().toISOString(),
-  }))
-
-  // A little back-history so the register and export aren't empty
-  const entries = []
-  const today = new Date()
-  for (let d = 1; d <= 9; d++) {
-    const date = new Date(today)
-    date.setDate(today.getDate() - d)
-    const iso = date.toISOString().slice(0, 10)
-    members.forEach((m, i) => {
-      if ((d + i) % 3 !== 0) entries.push({ member_id: m.id, lunch_date: iso })
-    })
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setBusy(true)
+    const { ok, error } = await login(pw)
+    setBusy(false)
+    if (ok) { onSuccess() } else { setError(error || 'Wrong password — try again.'); setPw('') }
   }
 
-  return { members, entries, dayMeta: {} }
-}
-
-const readDb = () => {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* fall through to reseed */ }
-  const db = seedDb()
-  localStorage.setItem(LS_KEY, JSON.stringify(db))
-  return db
-}
-
-const writeDb = (db) => localStorage.setItem(LS_KEY, JSON.stringify(db))
-
-const localStore = {
-  async listMembers() {
-    return readDb().members
-  },
-
-  async addMember(name, food_pref, email = '') {
-    const db = readDb()
-    const member = {
-      id: `local-${Date.now()}`,
-      name,
-      food_pref,
-      email,
-      active: true,
-      created_at: new Date().toISOString(),
+  const submitReset = async (e) => {
+    e.preventDefault()
+    setResetMsg('')
+    if (next !== confirm) { setResetMsg('New passwords don’t match.'); return }
+    setBusy(true)
+    const { ok, error } = await resetPassword(current, next)
+    setBusy(false)
+    if (ok) {
+      // Log straight in with the new password.
+      const res = await login(next)
+      if (res.ok) return onSuccess()
+      setMode('login')
+      setResetMsg('')
+      setError('Password changed — please log in.')
+    } else {
+      setResetMsg(error || 'Could not change the password.')
     }
-    db.members.push(member)
-    writeDb(db)
-    return member
-  },
+  }
 
-  async updateMember(id, fields) {
-    const db = readDb()
-    const m = db.members.find((x) => x.id === id)
-    if (!m) throw new Error('Member not found')
-    Object.assign(m, fields)
-    writeDb(db)
-    return m
-  },
+  return (
+    <div className={styles.screen}>
+      <div className={styles.card}>
+        <span className={styles.mark} aria-hidden="true">
+          <span className={styles.markDot} />
+        </span>
+        <p className={styles.company}>firebrand labs</p>
+        <h1 className={styles.title}>Lunch Register</h1>
 
-  async deleteMember(id) {
-    const db = readDb()
-    db.members = db.members.filter((m) => m.id !== id)
-    db.entries = db.entries.filter((e) => e.member_id !== id)
-    writeDb(db)
-  },
+        {mode === 'login' ? (
+          <form onSubmit={submit} className={styles.form}>
+            <p className={styles.subtitle}>Enter the team password to open the dashboard.</p>
 
-  async getEntries(from, to) {
-    return readDb().entries.filter((e) => e.lunch_date >= from && e.lunch_date <= to)
-  },
+            <div className={styles.pwWrap}>
+              <input
+                className={`${styles.input} ${error ? styles.inputError : ''}`}
+                type={show ? 'text' : 'password'}
+                value={pw}
+                onChange={(e) => { setPw(e.target.value); setError('') }}
+                placeholder="Team password"
+                aria-label="Team password"
+                autoFocus
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className={styles.eye}
+                onClick={() => setShow((s) => !s)}
+                aria-label={show ? 'Hide password' : 'Show password'}
+                title={show ? 'Hide password' : 'Show password'}
+              >
+                <EyeIcon off={show} />
+              </button>
+            </div>
 
-  async addEntry(member_id, lunch_date) {
-    const db = readDb()
-    const exists = db.entries.some((e) => e.member_id === member_id && e.lunch_date === lunch_date)
-    if (!exists) {
-      db.entries.push({ member_id, lunch_date })
-      writeDb(db)
-    }
-  },
+            {error && <p className={styles.errorMsg} role="alert">{error}</p>}
 
-  async removeEntry(member_id, lunch_date) {
-    const db = readDb()
-    db.entries = db.entries.filter((e) => !(e.member_id === member_id && e.lunch_date === lunch_date))
-    writeDb(db)
-  },
+            <button className={styles.button} type="submit" disabled={busy}>
+              {busy ? 'Checking…' : 'Open dashboard'}
+            </button>
 
-  async getDayMeta(from, to) {
-    const db = readDb()
-    return Object.values(db.dayMeta).filter((d) => d.lunch_date >= from && d.lunch_date <= to)
-  },
+            {isLive && (
+              <button type="button" className={styles.linkBtn}
+                onClick={() => { setMode('reset'); setError(''); setResetMsg('') }}>
+                Change password
+              </button>
+            )}
 
-  async setDayMeta(lunch_date, fields) {
-    const db = readDb()
-    db.dayMeta[lunch_date] = { lunch_date, guest_count: 0, note: '', ...db.dayMeta[lunch_date], ...fields }
-    writeDb(db)
-  },
+            {USING_DEFAULT_PASSWORD && (
+              <p className={styles.hint}>
+                No password set yet — using the default. Add <code>VITE_APP_PASSWORD</code> to
+                your <code>.env</code> and restart before sharing the link.
+              </p>
+            )}
+          </form>
+        ) : (
+          <form onSubmit={submitReset} className={styles.form}>
+            <p className={styles.subtitle}>Change the team password. You’ll need the current one.</p>
 
-  async getSettings() {
-    const db = readDb()
-    return db.settings || { chef_name: '', chef_email: '', chef_photo: '', cutoff: '11:00' }
-  },
+            <input className={styles.input} type={show ? 'text' : 'password'} value={current}
+              onChange={(e) => setCurrent(e.target.value)} placeholder="Current password"
+              aria-label="Current password" autoComplete="current-password" autoFocus />
+            <input className={styles.input} type={show ? 'text' : 'password'} value={next}
+              onChange={(e) => setNext(e.target.value)} placeholder="New password"
+              aria-label="New password" autoComplete="new-password" />
+            <div className={styles.pwWrap}>
+              <input className={styles.input} type={show ? 'text' : 'password'} value={confirm}
+                onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password"
+                aria-label="Confirm new password" autoComplete="new-password" />
+              <button type="button" className={styles.eye} onClick={() => setShow((s) => !s)}
+                aria-label={show ? 'Hide passwords' : 'Show passwords'}
+                title={show ? 'Hide passwords' : 'Show passwords'}>
+                <EyeIcon off={show} />
+              </button>
+            </div>
 
-  async updateSettings(fields) {
-    const db = readDb()
-    db.settings = { chef_name: '', chef_email: '', chef_photo: '', cutoff: '11:00', ...db.settings, ...fields }
-    writeDb(db)
-  },
+            {resetMsg && <p className={styles.errorMsg} role="alert">{resetMsg}</p>}
 
-  // Emails need Supabase + Resend — not available in demo mode.
-  async notifyChange() {
-    return { demo: true }
-  },
-
-  async sendChefList() {
-    throw new Error('Emails need Supabase — demo mode stores data only in this browser.')
-  },
+            <button className={styles.button} type="submit" disabled={busy}>
+              {busy ? 'Saving…' : 'Save new password'}
+            </button>
+            <button type="button" className={styles.linkBtn}
+              onClick={() => { setMode('login'); setResetMsg('') }}>
+              Back to login
+            </button>
+            <p className={styles.hint}>
+              Forgot it and no one’s logged in? Reset it from the SQL Editor —
+              see <code>migration-v3.sql</code>.
+            </p>
+          </form>
+        )}
+      </div>
+      <p className={styles.foot}>firebrand labs · internal lunch register</p>
+    </div>
+  )
 }
-
-export const store = isLive ? supabaseStore : localStore

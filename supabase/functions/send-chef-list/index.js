@@ -1,69 +1,101 @@
-// send-chef-list — emails the final lunch list to the chef.
-//
-// Two callers:
-//   • pg_cron at 18:30 IST (window just closed), body { target: 'next' }
-//     → sends the NEXT working day's list — the plates just ordered in
-//       the 5:00–6:30 PM window (Sunday's send = Monday).
-//   • dashboard "Send today's list now" button, body { force: true }
-//     → sends TODAY's list on demand (default target = today).
-import { admin, cors, json, sendEmail, shell, todayIST, nextLunchDateIST, claimSend } from '../_shared/lib.js'
+import { useState } from 'react'
+import styles from './ChefCard.module.css'
+import { isLive } from '../lib/store'
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+/**
+ * The kitchen card: chef's photo, name and email, plus the manual
+ * "Send today's list" button. The 6:30 PM IST cron sends the next
+ * day's final list automatically; this button sends/resends today's
+ * list any time.
+ */
+export default function ChefCard({ data }) {
+  const { settings, updateSettings, sendChefList } = data
+  const [editing, setEditing] = useState(!settings.chef_name && !settings.chef_email)
+  const [form, setForm] = useState({
+    chef_name: settings.chef_name || '',
+    chef_email: settings.chef_email || '',
+    chef_photo: settings.chef_photo || '',
+  })
+  const [sending, setSending] = useState(false)
 
-  try {
-    const { force = false, target = 'today' } = await req.json().catch(() => ({}))
-    const db = admin()
-    // Evening cron targets the next working lunch day; the manual
-    // dashboard button targets today.
-    const date = target === 'next' ? nextLunchDateIST() : todayIST()
-
-    const [{ data: settings }, { data: members }, { data: entries }, { data: meta }] =
-      await Promise.all([
-        db.from('app_settings').select('*').eq('id', 1).single(),
-        db.from('members').select('*'),
-        db.from('lunch_entries').select('member_id').eq('lunch_date', date),
-        db.from('day_meta').select('*').eq('lunch_date', date).maybeSingle(),
-      ])
-
-    if (!settings?.chef_email) return json({ error: 'No chef email set. Add it on the dashboard.' }, 400)
-
-    // Cron path: only send once per day. Button path (force): always send an updated list.
-    if (!force) {
-      const fresh = await claimSend(db, 'chef_list', date)
-      if (!fresh) return json({ skipped: 'Chef list already sent today' })
-    } else {
-      await claimSend(db, 'chef_list', date) // mark as sent if it wasn't already
-    }
-
-    const byId = Object.fromEntries((members ?? []).map((m) => [m.id, m]))
-    const list = (entries ?? []).map((e) => byId[e.member_id]).filter(Boolean)
-    const veg = list.filter((m) => m.food_pref === 'veg')
-    const nonveg = list.filter((m) => m.food_pref !== 'veg')
-    const guests = meta?.guest_count ?? 0
-    const total = list.length + guests
-
-    const nameLi = (arr) =>
-      arr.length
-        ? `<ul style="margin:6px 0 14px;padding-left:20px">${arr.map((m) => `<li>${m.name}</li>`).join('')}</ul>`
-        : '<p style="color:#5a645c;margin:6px 0 14px">— none —</p>'
-
-    const when = target === 'next' ? 'tomorrow' : 'today'
-
-    const html = shell(
-      `Lunch list · ${date}`,
-      `<p style="font-size:17px"><b>${total} plate${total === 1 ? '' : 's'} to cook ${when}</b>
-        (${veg.length} veg · ${nonveg.length} non-veg${guests ? ` · ${guests} guest` : ''})</p>
-       <p style="margin-bottom:2px"><b style="color:#1f5c38">🟢 Veg — ${veg.length}</b></p>${nameLi(veg)}
-       <p style="margin-bottom:2px"><b style="color:#c03b2b">🔴 Non-veg — ${nonveg.length}</b></p>${nameLi(nonveg)}
-       ${meta?.note ? `<p><b>Note:</b> ${meta.note}</p>` : ''}
-       <p style="color:#5a645c;font-size:13px">The order window is closed, so this list is final. 🍛</p>`
-    )
-
-    await sendEmail(settings.chef_email, `Lunch ${when} (${date}): ${total} plates (${veg.length}V / ${nonveg.length}NV)`, html)
-    return json({ sent: true, total })
-  } catch (err) {
-    console.error(err)
-    return json({ error: String(err) }, 500)
+  const save = () => {
+    updateSettings({
+      chef_name: form.chef_name.trim(),
+      chef_email: form.chef_email.trim(),
+      chef_photo: form.chef_photo.trim(),
+    })
+    setEditing(false)
   }
-})
+
+  const send = async () => {
+    setSending(true)
+    await sendChefList()
+    setSending(false)
+  }
+
+  const initial = (settings.chef_name || '?').trim().charAt(0).toUpperCase()
+
+  return (
+    <section className={styles.card} aria-label="Kitchen and chef">
+      <div className={styles.top}>
+        {settings.chef_photo ? (
+          <img className={styles.photo} src={settings.chef_photo} alt={settings.chef_name || 'Chef'} />
+        ) : (
+          <div className={styles.photoFallback} aria-hidden="true">{initial}</div>
+        )}
+
+        <div className={styles.who}>
+          <p className={styles.role}>Today's kitchen</p>
+          <h2 className={styles.name}>{settings.chef_name || 'Add your chef'}</h2>
+          <p className={styles.email}>{settings.chef_email || 'chef email not set'}</p>
+        </div>
+
+        <button className={styles.editBtn} onClick={() => setEditing((e) => !e)}>
+          {editing ? 'Close' : 'Edit'}
+        </button>
+      </div>
+
+      {editing && (
+        <div className={styles.form}>
+          <label className={styles.field}>
+            <span>Chef's name</span>
+            <input
+              value={form.chef_name}
+              onChange={(e) => setForm({ ...form, chef_name: e.target.value })}
+              placeholder="e.g. Murugan Anna"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Chef's email</span>
+            <input
+              type="email"
+              value={form.chef_email}
+              onChange={(e) => setForm({ ...form, chef_email: e.target.value })}
+              placeholder="chef@example.com"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Photo URL (optional)</span>
+            <input
+              value={form.chef_photo}
+              onChange={(e) => setForm({ ...form, chef_photo: e.target.value })}
+              placeholder="https://…/chef.jpg"
+            />
+          </label>
+          <button className={styles.saveBtn} onClick={save}>Save chef details</button>
+        </div>
+      )}
+
+      <div className={styles.sendRow}>
+        <button className={styles.sendBtn} onClick={send} disabled={sending || !settings.chef_email}>
+          {sending ? 'Sending…' : "Send today's list now"}
+        </button>
+        <p className={styles.sendHint}>
+          {isLive
+            ? 'Auto-sends the next day’s final list at 6:30 PM IST, when the order window closes. This button sends today’s list on demand.'
+            : 'Demo mode — emails switch on once Supabase + Resend are connected.'}
+        </p>
+      </div>
+    </section>
+  )
+}
