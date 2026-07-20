@@ -1,49 +1,76 @@
 // ============================================================
-// Shared-password gate for the dashboard.
+// Dashboard login gate.
 //
-// The register is an internal tool — this keeps "anyone with the
-// link" out with a single team password. Set it in .env:
+// LIVE (Supabase connected): the password is checked in Supabase by
+// the `dashboard-auth` edge function against a hash stored in the
+// private app_auth table. The browser never sees the hash — it sends
+// the typed password and gets back yes / no. The password can be
+// changed in-app (reset) or from SQL; no redeploy needed.
 //
-//   VITE_APP_PASSWORD=your-team-password
+// DEMO (no Supabase): falls back to a local password so the app still
+// runs out of the zip. Set it with VITE_APP_PASSWORD, else a default.
 //
-// If it is not set, a default is used so the app still runs out of
-// the box (change it before sharing the link!). This is a client-side
-// gate: good enough to stop casual access to an internal tool, not a
-// replacement for real per-user auth. The public one-click email
-// pages (/join, /cancel) are intentionally NOT gated.
+// Either way a small "remembered" flag in localStorage keeps you
+// logged in on this browser until you press Log out. The public email
+// pages (/join, /cancel) are never gated.
 // ============================================================
 
-const CONFIGURED = import.meta.env.VITE_APP_PASSWORD
-export const APP_PASSWORD = CONFIGURED || 'firebrand-lunch'
-
-// True when no password was set in .env — surfaced on the login page
-// as a gentle reminder to set one before sharing the dashboard.
-export const USING_DEFAULT_PASSWORD = !CONFIGURED
+import { isLive, supabaseClient } from './store'
 
 const AUTH_KEY = 'fbl-lunch-auth-v1'
+const REMEMBER_TOKEN = 'authed'
 
-// We store a small token (not the password) so a shared computer
-// doesn't leave the password sitting in localStorage.
-const token = () => btoa(`ok:${APP_PASSWORD.length}`)
+// ---- demo-mode fallback password ----
+const DEMO_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'firebrand-lunch'
+export const USING_DEFAULT_PASSWORD = isLive ? false : !import.meta.env.VITE_APP_PASSWORD
 
+// Was this browser already logged in?
 export const isAuthed = () => {
   try {
-    return localStorage.getItem(AUTH_KEY) === token()
+    return localStorage.getItem(AUTH_KEY) === REMEMBER_TOKEN
   } catch {
     return false
   }
 }
 
-export const login = (attempt) => {
-  if ((attempt ?? '') !== APP_PASSWORD) return false
-  try {
-    localStorage.setItem(AUTH_KEY, token())
-  } catch { /* private mode — session-only, still fine */ }
-  return true
+const remember = () => {
+  try { localStorage.setItem(AUTH_KEY, REMEMBER_TOKEN) } catch { /* private mode */ }
 }
 
 export const logout = () => {
+  try { localStorage.removeItem(AUTH_KEY) } catch { /* ignore */ }
+}
+
+const authFn = (body) => supabaseClient.functions.invoke('dashboard-auth', { body })
+
+// Verify a password. Returns { ok, error? }.
+export const login = async (attempt) => {
+  if (!isLive) {
+    const ok = (attempt ?? '') === DEMO_PASSWORD
+    if (ok) remember()
+    return { ok, error: ok ? undefined : 'Wrong password.' }
+  }
   try {
-    localStorage.removeItem(AUTH_KEY)
-  } catch { /* ignore */ }
+    const { data, error } = await authFn({ action: 'login', password: attempt })
+    if (error) return { ok: false, error: 'Could not reach the server. Try again.' }
+    if (data?.ok) { remember(); return { ok: true } }
+    return { ok: false, error: data?.error || 'Wrong password.' }
+  } catch {
+    return { ok: false, error: 'Could not reach the server. Try again.' }
+  }
+}
+
+// Change the password. Requires the current one. Returns { ok, error? }.
+export const resetPassword = async (current, next) => {
+  if (!isLive) {
+    return { ok: false, error: 'Password reset needs Supabase — not available in demo mode.' }
+  }
+  try {
+    const { data, error } = await authFn({ action: 'reset', current, next })
+    if (error) return { ok: false, error: 'Could not reach the server. Try again.' }
+    if (data?.ok) return { ok: true }
+    return { ok: false, error: data?.error || 'Could not update the password.' }
+  } catch {
+    return { ok: false, error: 'Could not reach the server. Try again.' }
+  }
 }

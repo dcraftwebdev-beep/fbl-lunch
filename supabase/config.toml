@@ -40,3 +40,8 @@ verify_jwt = false
 
 [functions.last-call]
 entrypoint = "./functions/last-call/index.js"
+
+[functions.dashboard-auth]
+entrypoint = "./functions/dashboard-auth/index.js"
+# The login page has no Supabase auth token to send:
+verify_jwt = false

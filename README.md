@@ -8,25 +8,42 @@ Built with React + Vite, CSS Modules, and Supabase. No Tailwind, no Next.js.
 
 ---
 
-## Login (shared team password)
+## Login (team password, checked in Supabase)
 
 The dashboard is gated behind a single team password so not just anyone
-with the link can open it. Set it in `.env`:
+with the link can open it. The login screen has a **show/hide (eye)
+toggle** and a **Change password** option, and auth is remembered per
+browser with a **Log out** button in the header. The public one-click
+email pages (`/join`, `/cancel`) are intentionally NOT gated — those
+links must work straight from an inbox.
 
-```
-VITE_APP_PASSWORD=your-team-password
-```
+**How it's checked (live mode):** the password is verified in Supabase,
+not in the browser bundle. The hash lives in a private `app_auth` table
+(RLS on, no policies — the anon key can't read it) and the
+`dashboard-auth` edge function compares it using the service-role key.
+The browser only sends the typed password and gets back yes / no.
 
-Change it before sharing the link; change it again to lock everyone out.
-If it's left unset, a default is used and the login screen warns you to
-set one. Auth is remembered per browser and there's a **Log out** button
-in the header. The public one-click email pages (`/join`, `/cancel`) are
-intentionally NOT gated — those links must work straight from an inbox
-without a password.
+Set it up:
 
-> This is a lightweight client-side gate for an internal tool — it keeps
-> casual visitors out. For per-person accounts you can revoke individually,
-> switch to Supabase Auth later.
+1. Run `supabase/migration-v3.sql` in the SQL Editor. Change
+   `'firebrand2026'` in that file to your team password first (it's
+   hashed on the way in).
+2. Deploy the function: `supabase functions deploy dashboard-auth`
+   (`config.toml` already marks it `verify_jwt = false`).
+
+**Changing the password:** use **Change password** on the login screen
+(needs the current one). If it's forgotten and nobody's logged in, reset
+it from the SQL Editor — the `update app_auth …` snippet is at the bottom
+of `migration-v3.sql`.
+
+**Demo mode (no Supabase):** there's no edge function, so it falls back
+to a local password — set `VITE_APP_PASSWORD` in `.env`, otherwise a
+default is used and the screen reminds you to set one.
+
+> This is a practical gate for an internal tool: the password check is
+> server-side, but the "stay logged in" flag is a normal browser flag.
+> For individually-revocable per-person accounts, switch to Supabase
+> Auth later.
 
 ---
 
@@ -117,8 +134,9 @@ itself is fine.
 1. **Resend**: sign up at resend.com, verify the `firebrandlabs.in` domain
    (Domains → Add → add the DNS records they show), then create an API key.
 
-2. **Database**: existing projects run `supabase/migration-v2.sql` in the SQL
-   Editor (fresh installs: `schema.sql` already contains everything).
+2. **Database**: existing projects run `supabase/migration-v2.sql` then
+   `supabase/migration-v3.sql` (the login password table) in the SQL Editor
+   (fresh installs: `schema.sql` already contains everything).
 
 3. **Install the Supabase CLI** and link the project:
    ```bash
@@ -140,6 +158,7 @@ itself is fine.
    supabase functions deploy send-chef-list
    supabase functions deploy notify-change
    supabase functions deploy daily-funny
+   supabase functions deploy dashboard-auth
    supabase functions deploy cancel-lunch --no-verify-jwt
    ```
 

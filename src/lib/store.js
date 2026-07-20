@@ -20,6 +20,10 @@ export const isLive = Boolean(SUPABASE_URL && SUPABASE_KEY)
 
 const supabase = isLive ? createClient(SUPABASE_URL, SUPABASE_KEY) : null
 
+// Exposed so the login gate (src/lib/auth.js) can call the
+// dashboard-auth edge function. Null in demo mode.
+export const supabaseClient = supabase
+
 const supabaseStore = {
   async listMembers() {
     const { data, error } = await supabase
