@@ -9,6 +9,9 @@ node_modules/
 # Build output
 dist/
 
+# Vite temp files
+vite.config.js.timestamp-*
+
 # Logs
 npm-debug.log*
 *.log
