@@ -17,14 +17,11 @@ entrypoint = "./functions/cancel-lunch/index.js"
 # The cancel link in emails must work without login:
 verify_jwt = false
 
-# morning-invite is RETIRED — replaced by the 5 PM evening-invite below.
+# 10:00 AM post: defaults IN + today's list to Basecamp.
+[functions.morning-invite]
+entrypoint = "./functions/morning-invite/index.js"
 
-[functions.evening-invite]
-entrypoint = "./functions/evening-invite/index.js"
-
-[functions.weekend-funny]
-entrypoint = "./functions/weekend-funny/index.js"
-
+# 11:00 AM reminder post ("15 minutes left").
 [functions.midday-confirm]
 entrypoint = "./functions/midday-confirm/index.js"
 

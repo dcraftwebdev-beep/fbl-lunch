@@ -36,7 +36,7 @@ export async function sendEmail(to, subject, html) {
 export const todayIST = () =>
   new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
 
-// Tomorrow's date in IST — used by the 5 PM evening invite flow
+// Tomorrow's date in IST — kept for any next-day helpers/previews.
 export const tomorrowIST = () =>
   new Date(Date.now() + (24 + 5.5) * 3600 * 1000).toISOString().slice(0, 10)
 
@@ -56,24 +56,85 @@ export const isWeekendIST = () => {
 }
 
 /* ---------------- order window ---------------- */
-// Lunch is ordered the EVENING BEFORE, between 5:00 PM and 6:30 PM IST,
-// Sunday–Thursday (each window orders for the next working day).
-// Outside the window the register is closed — no joins, no cancels.
+// MORNING-ONLY window. Lunch runs Mon–Fri. On a lunch day the register
+// is open from midnight until 11:15 AM IST, when the kitchen list locks.
+// There is no evening / overnight ordering anymore — everything is same
+// day. Joins + cancels work everywhere during the window (Basecamp
+// !lunch in/out, email buttons, dashboard); outside it the register is
+// locked. The daily rhythm:
+//   10:00 AM → morning post: defaults are IN, today's list to Basecamp
+//   11:00 AM → reminder post ("last chance, closes 11:15")
+//   11:15 AM → window closes, final list posted + chef list
 
-export const ORDER_OPEN_MIN = 17 * 60        // 5:00 PM IST
-export const ORDER_CLOSE_MIN = 18 * 60 + 30  // 6:30 PM IST
+export const MORNING_CLOSE_MIN = 11 * 60 + 15 // 11:15 AM IST (window closes)
 
 export const nowISTMinutes = () => {
   const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
   return ist.getUTCHours() * 60 + ist.getUTCMinutes()
 }
 
-export const orderWindowOpen = () => {
+// The window is open Mon–Fri, any time before 11:15 AM IST. Always
+// ordering for TODAY.
+export const morningLegOpen = () => {
   const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
-  const wd = ist.getUTCDay() // Sun=0 … Sat=6; window days are Sun–Thu
+  const wd = ist.getUTCDay()
   const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes()
-  return wd <= 4 && mins >= ORDER_OPEN_MIN && mins < ORDER_CLOSE_MIN
+  return wd >= 1 && wd <= 5 && mins < MORNING_CLOSE_MIN
 }
+
+export const orderWindowOpen = () => morningLegOpen()
+
+// The lunch day the window is ordering for — always today now.
+export const orderTargetDate = () => todayIST()
+
+/* ---------------- default daily lunch members ---------------- */
+// Members flagged is_default in the roster are IN by default every lunch
+// day. Manage the flags in the dashboard (Team roster → "default"
+// toggle). Anyone can still opt out for a day with !lunch out.
+
+// Ensure the default members have an entry for `date`. Idempotent —
+// only inserts the ones missing. Returns the members it added.
+export async function ensureDefaultMembers(db, date) {
+  const { data: defaults } = await db
+    .from('members')
+    .select('id, name, food_pref')
+    .eq('active', true)
+    .eq('is_default', true)
+  if (!defaults || defaults.length === 0) return []
+
+  const { data: existing } = await db
+    .from('lunch_entries')
+    .select('member_id')
+    .eq('lunch_date', date)
+  const already = new Set((existing ?? []).map((e) => e.member_id))
+
+  const toAdd = defaults.filter((m) => !already.has(m.id))
+  if (toAdd.length) {
+    await db.from('lunch_entries').insert(toAdd.map((m) => ({ member_id: m.id, lunch_date: date })))
+  }
+  return toAdd
+}
+
+// Fetch the list of members on a given lunch date, with veg/non-veg.
+export async function lunchRoster(db, date) {
+  const { data: entries } = await db
+    .from('lunch_entries')
+    .select('member_id')
+    .eq('lunch_date', date)
+  const ids = (entries ?? []).map((e) => e.member_id)
+  if (ids.length === 0) return []
+  const { data: members } = await db
+    .from('members')
+    .select('id, name, email, food_pref')
+    .in('id', ids)
+  return members ?? []
+}
+
+// Render a names list as HTML (veg/non-veg dots), for Basecamp + emails.
+export const rosterNamesHtml = (roster) =>
+  roster.length
+    ? roster.map((m) => `${m.food_pref === 'veg' ? '🟢' : '🔴'} ${m.name}`).join(', ')
+    : '<i>no one yet</i>'
 
 export const dayOfYear = () => {
   const now = new Date(Date.now() + 5.5 * 3600 * 1000)

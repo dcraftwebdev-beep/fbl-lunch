@@ -141,6 +141,24 @@
   color: var(--ink);
 }
 
+/* ---------- default-lunch toggle ---------- */
+
+.defaultOn {
+  background: var(--primary);
+  color: var(--paper);
+  border: 1px solid var(--primary);
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.defaultOn:hover {
+  background: #17452b;
+}
+
 .dotVeg,
 .dotNonveg {
   width: 13px;

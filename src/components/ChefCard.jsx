@@ -4,8 +4,8 @@ import { isLive } from '../lib/store'
 
 /**
  * The kitchen card: chef's photo, name and email, plus the manual
- * "Send today's list" button. The 6:30 PM IST cron sends the next
- * day's final list automatically; this button sends/resends today's
+ * "Send today's list" button. The 11:15 AM IST cron sends today's
+ * final list automatically; this button sends/resends today's
  * list any time.
  */
 export default function ChefCard({ data }) {
@@ -92,7 +92,7 @@ export default function ChefCard({ data }) {
         </button>
         <p className={styles.sendHint}>
           {isLive
-            ? 'Auto-sends the next day’s final list at 6:30 PM IST, when the order window closes. This button sends today’s list on demand.'
+            ? 'Auto-sends today’s final list at 11:15 AM IST, when the order window closes. This button sends today’s list on demand.'
             : 'Demo mode — emails switch on once Supabase + Resend are connected.'}
         </p>
       </div>

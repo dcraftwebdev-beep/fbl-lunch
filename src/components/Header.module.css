@@ -1,6 +1,9 @@
 .header {
-  background: var( --primary);
-  color: var(--paper);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .inner {
@@ -9,63 +12,86 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 0;
+  gap: 20px;
+  padding: 14px 0;
 }
 
+/* ---------- Brand ---------- */
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+  height: auto;
+}
+
+.divider {
+  width: 1px;
+  height: 26px;
+  background: var(--line-strong);
+}
+
+.portalTag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ---------- Nav ---------- */
+.nav {
+  display: flex;
+  gap: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.activeTab,
+.activeTab:hover {
+  background: var(--ink);
+  color: var(--card);
+  box-shadow: 0 1px 3px rgba(23, 20, 18, 0.18);
+}
+
+/* ---------- Right ---------- */
+.right {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-/* The veg-mark as brand mark: green square, white dot */
-.mark {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--paper);
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.markDot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--warning);
-}
-
-.company {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  color: #a8c5b2;
-}
-
-.title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(22px, 3vw, 28px);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-}
-
-.right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
 .date {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 13px;
-  color: #cfe0d5;
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .rightRow {
@@ -75,46 +101,69 @@
 }
 
 .logout {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  padding: 3px 10px;
-  border-radius: 100px;
-  background: transparent;
-  border: 1px solid rgba(246, 247, 242, 0.4);
-  color: #f6f7f2;
-  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  transition: all 0.15s ease;
 }
 
 .logout:hover {
-  background: rgba(246, 247, 242, 0.14);
-  border-color: rgba(246, 247, 242, 0.7);
+  border-color: var(--ink-soft);
+  background: var(--paper);
 }
 
 .pillLive,
 .pillDemo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.06em;
-  padding: 3px 10px;
+  letter-spacing: 0.04em;
+  padding: 5px 11px;
   border-radius: 100px;
   border: 1px solid transparent;
 }
 
 .pillLive {
-  background: rgba(233, 161, 59, 0.15);
-  border-color: var(--warning);
-  color: var(--warning);
+  background: #e0f2e9;
+  border-color: #b5ddc7;
+  color: #2d8a56;
+}
+
+.pillLive::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2d8a56;
 }
 
 .pillDemo {
-  background: rgba(246, 247, 242, 0.1);
-  border-color: rgba(246, 247, 242, 0.4);
-  color: #cfe0d5;
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold-deep);
+}
+
+.pillDemo::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold-deep);
 }
 
 @media (max-width: 900px) {
-  .inner { width: calc(100% - 32px); }
-  .right { align-items: flex-start; }
-  .inner { flex-wrap: wrap; }
+  .inner {
+    width: calc(100% - 32px);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nav { order: 3; width: 100%; justify-content: center; }
+  .divider, .portalTag { display: none; }
 }

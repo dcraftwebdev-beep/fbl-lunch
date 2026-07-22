@@ -25,30 +25,38 @@ function EyeIcon({ off }) {
 }
 
 /**
- * Shared-password gate. When Supabase is connected the password is
- * verified server-side (edge function). Includes a show/hide eye
- * toggle and an in-app "change password" (reset) panel.
+ * Username + password gate. When Supabase is connected the credentials
+ * are verified server-side (edge function). Includes a show/hide eye
+ * toggle and an in-app "change password" panel (needs the current one).
+ * Default credentials are set in migration-v8: admin / firebrand2026.
  */
 export default function Login({ onSuccess }) {
+  const [username, setUsername] = useState('')
   const [pw, setPw] = useState('')
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [mode, setMode] = useState('login') // 'login' | 'reset'
 
-  // reset panel state
+  // change-password panel state
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [resetMsg, setResetMsg] = useState('')
 
+  const goMode = (m) => {
+    setMode(m)
+    setError(''); setResetMsg('')
+    setCurrent(''); setNext(''); setConfirm('')
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setError('')
     setBusy(true)
-    const { ok, error } = await login(pw)
+    const { ok, error } = await login(username, pw)
     setBusy(false)
-    if (ok) { onSuccess() } else { setError(error || 'Wrong password — try again.'); setPw('') }
+    if (ok) { onSuccess() } else { setError(error || 'Wrong username or password.'); setPw('') }
   }
 
   const submitReset = async (e) => {
@@ -60,10 +68,9 @@ export default function Login({ onSuccess }) {
     setBusy(false)
     if (ok) {
       // Log straight in with the new password.
-      const res = await login(next)
+      const res = await login(username || 'admin', next)
       if (res.ok) return onSuccess()
-      setMode('login')
-      setResetMsg('')
+      goMode('login')
       setError('Password changed — please log in.')
     } else {
       setResetMsg(error || 'Could not change the password.')
@@ -81,7 +88,18 @@ export default function Login({ onSuccess }) {
 
         {mode === 'login' ? (
           <form onSubmit={submit} className={styles.form}>
-            <p className={styles.subtitle}>Enter the team password to open the dashboard.</p>
+            <p className={styles.subtitle}>Sign in with your username and password.</p>
+
+            <input
+              className={styles.input}
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setError('') }}
+              placeholder="Username"
+              aria-label="Username"
+              autoFocus
+              autoComplete="username"
+            />
 
             <div className={styles.pwWrap}>
               <input
@@ -89,9 +107,8 @@ export default function Login({ onSuccess }) {
                 type={show ? 'text' : 'password'}
                 value={pw}
                 onChange={(e) => { setPw(e.target.value); setError('') }}
-                placeholder="Team password"
-                aria-label="Team password"
-                autoFocus
+                placeholder="Password"
+                aria-label="Password"
                 autoComplete="current-password"
               />
               <button
@@ -112,8 +129,7 @@ export default function Login({ onSuccess }) {
             </button>
 
             {isLive && (
-              <button type="button" className={styles.linkBtn}
-                onClick={() => { setMode('reset'); setError(''); setResetMsg('') }}>
+              <button type="button" className={styles.linkBtn} onClick={() => goMode('reset')}>
                 Change password
               </button>
             )}
@@ -127,7 +143,7 @@ export default function Login({ onSuccess }) {
           </form>
         ) : (
           <form onSubmit={submitReset} className={styles.form}>
-            <p className={styles.subtitle}>Change the team password. You’ll need the current one.</p>
+            <p className={styles.subtitle}>Change the password. You’ll need the current one.</p>
 
             <input className={styles.input} type={show ? 'text' : 'password'} value={current}
               onChange={(e) => setCurrent(e.target.value)} placeholder="Current password"
@@ -151,13 +167,12 @@ export default function Login({ onSuccess }) {
             <button className={styles.button} type="submit" disabled={busy}>
               {busy ? 'Saving…' : 'Save new password'}
             </button>
-            <button type="button" className={styles.linkBtn}
-              onClick={() => { setMode('login'); setResetMsg('') }}>
+            <button type="button" className={styles.linkBtn} onClick={() => goMode('login')}>
               Back to login
             </button>
             <p className={styles.hint}>
-              Forgot it and no one’s logged in? Reset it from the SQL Editor —
-              see <code>migration-v3.sql</code>.
+              Forgot it and locked out? Reset it from the SQL Editor — re-run
+              <code> migration-v8-username-auth.sql</code> to restore <code>admin / firebrand2026</code>.
             </p>
           </form>
         )}

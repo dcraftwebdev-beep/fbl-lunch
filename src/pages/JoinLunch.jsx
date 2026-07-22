@@ -85,7 +85,7 @@ export default function JoinLunch() {
             <p className={styles.msg}>
               {result?.status === 'already'
                 ? 'Your plate for today was already marked. The kitchen has you covered.'
-                : 'Your plate for today is on the register. A confirmation with a cancel button lands in your inbox at 11.'}
+                : 'Your plate for today is on the register. Changed your mind? Type !lunch out in Basecamp before 11:15 AM.'}
             </p>
           </>
         )}
@@ -95,7 +95,7 @@ export default function JoinLunch() {
             <div className={`${styles.badge} ${styles.badgeBad}`} aria-hidden="true" />
             <h1 className={styles.title}>That didn't go through</h1>
             <p className={styles.msg}>
-              {result?.message || 'Link expired? Window is 5:00\u20136:30 PM. Wait for the next 5 PM email.'}
+              {result?.message || 'Link expired? The window is open till 11:15 AM today. Or type !lunch in on Basecamp.'}
             </p>
             <button className={styles.ghostBtn} onClick={confirm} type="button">Try again</button>
           </>

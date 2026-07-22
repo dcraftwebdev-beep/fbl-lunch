@@ -6,27 +6,27 @@ import styles from './TodayPanel.module.css'
  * add several people in a row. "Add everyone remaining" fills the rest.
  * Click outside or press Escape to close.
  *
- * ORDER CUTOFF — 6:30 PM IST: the order window runs 5:00–6:30 PM the
- * evening before. After 6:30 PM BOTH directions lock. Adding
- * (composer, add-all, copy-yesterday, guest +) gets a "window closed"
- * quip; removing (chips, guest −) gets a "food will go to waste"
- * quip. Corrections after 6:30 PM go through the register table
- * below (admin override).
+ * ORDER CUTOFF — 11:15 AM IST: the order window opens each lunch
+ * morning (defaults auto-added ~10:00 AM) and closes 11:15 AM the
+ * same day. After 11:15 AM BOTH directions lock. Adding (composer,
+ * add-all, copy-yesterday, guest +) gets a "window closed" quip;
+ * removing (chips, guest −) gets a "food will go to waste" quip.
+ * Corrections after 11:15 AM go through the register table below.
  */
 
-const CUTOFF_MIN = 18 * 60 + 30 // 6:30 PM IST
+const CUTOFF_MIN = 11 * 60 + 15 // 11:15 AM IST
 
 const CLOSED_LINES = [
-  'Order time over ⏰ Window: 5:00–6:30 PM.',
-  'Register closed. Next window: 5:00 PM.',
-  'Locked at 6:30 PM. Be quicker next time!',
+  'Order time over ⏰ Window closed at 11:15 AM.',
+  'Register closed. Opens again tomorrow ~10:00 AM.',
+  'Locked at 11:15 AM. Be quicker next time!',
   'Closed. The rice has a no-refunds policy. 🍚',
 ]
 
 const NO_REMOVE_LINES = [
   "Can't remove — plate's being cooked. No food waste. 🍛",
   'Too late to pull a plate. It stays.',
-  'Locked since 6:30 PM. No removals.',
+  'Locked since 11:15 AM. No removals.',
   'Genuine mistake? Fix it in the register table below.',
 ]
 
@@ -49,7 +49,7 @@ export default function TodayPanel({ data }) {
 
   const ordersClosed = nowISTMinutes() >= CUTOFF_MIN
 
-  // Re-render once a minute so the panel flips to "closed" at 6:30 PM
+  // Re-render once a minute so the panel flips to "closed" at 11:15 AM
   // even if the tab has been open all day.
   useEffect(() => {
     const t = setInterval(() => forceTick((n) => n + 1), 60 * 1000)
@@ -177,7 +177,7 @@ export default function TodayPanel({ data }) {
           onKeyDown={onKeyDown}
           placeholder={
             ordersClosed
-              ? 'Orders closed (6:30 PM) — window reopens at 5:00 PM'
+              ? 'Orders closed (11:15 AM) — opens again tomorrow ~10:00 AM'
               : 'Type @ once, then keep picking — e.g. @pri'
           }
           disabled={ordersClosed}

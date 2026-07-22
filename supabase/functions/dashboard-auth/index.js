@@ -1,13 +1,15 @@
-// dashboard-auth — verifies the dashboard login password server-side.
+// dashboard-auth — verifies the dashboard username + password server-side.
 //
-// The password hash lives in the app_auth table, which the public anon
-// key cannot read (RLS on, no policies). This function uses the
-// service-role key to check it, so the hash never reaches the browser.
+// The credentials live in the app_auth table, which the public anon key
+// cannot read (RLS on, no policies). This function uses the service-role
+// key to check them, so the hash never reaches the browser.
 //
 // Actions (POST JSON):
-//   { action: 'status' }               → { configured: bool }
-//   { action: 'login',  password }     → { ok: bool }
-//   { action: 'reset',  current, next} → { ok: bool, error? }
+//   { action: 'status' }                     → { configured: bool }
+//   { action: 'login', username, password }  → { ok: bool }
+//   { action: 'reset', current, next }       → { ok: bool, error? }
+//
+// DEFAULT CREDENTIALS (see migration-v8):  admin / firebrand2026
 //
 // DEPLOY:   supabase functions deploy dashboard-auth
 // (config.toml already sets verify_jwt = false — the login page has
@@ -26,26 +28,22 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
-    const { action = 'login', password, current, next } = await req.json().catch(() => ({}))
+    const { action = 'login', username, password, current, next } = await req.json().catch(() => ({}))
     const db = admin()
 
-    const { data: row } = await db
-      .from('app_auth')
-      .select('password_hash')
-      .eq('id', 1)
-      .maybeSingle()
-
+    // select('*') so this never breaks if the username column isn't there yet
+    const { data: row } = await db.from('app_auth').select('*').eq('id', 1).maybeSingle()
     const stored = row?.password_hash || null
 
     if (action === 'status') {
       return json({ configured: Boolean(stored) })
     }
 
+    // Change password: needs the current one, keeps the username.
     if (action === 'reset') {
       if (!next || String(next).length < 4) {
         return json({ ok: false, error: 'New password must be at least 4 characters.' }, 400)
       }
-      // If a password is already set, the current one must match.
       if (stored && (await sha256Hex(current)) !== stored) {
         return json({ ok: false, error: 'Current password is wrong.' }, 401)
       }
@@ -59,13 +57,18 @@ Deno.serve(async (req) => {
 
     // default: login
     if (!stored) {
-      // No password configured yet — tell the client so it can guide setup.
-      return json({ ok: false, error: 'No dashboard password is set. Run migration-v3.sql.' }, 409)
+      return json({ ok: false, error: 'No dashboard password is set. Run migration-v8.sql.' }, 409)
     }
-    const ok = (await sha256Hex(password)) === stored
-    return json({ ok })
+    // Username is enforced only when the row has one AND the client sends one,
+    // so an older frontend that only sends a password still works.
+    const sentUser = String(username ?? '').trim()
+    const userOk = !row.username || !sentUser
+      || sentUser.toLowerCase() === String(row.username).trim().toLowerCase()
+    const passOk = (await sha256Hex(password)) === stored
+    return json({ ok: userOk && passOk })
   } catch (err) {
     console.error(err)
-    return json({ ok: false, error: String(err) }, 500)
+    const msg = err?.message || err?.hint || JSON.stringify(err)
+    return json({ ok: false, error: msg }, 500)
   }
 })

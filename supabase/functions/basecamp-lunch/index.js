@@ -1,20 +1,20 @@
 // basecamp-lunch — the Command URL behind the Basecamp "!lunch" chatbot.
 //
 // Commands (also works via single-word bots using ?do=in / ?do=out):
-//   !lunch in       → books you for the NEXT lunch day — works ONLY
-//                     during the order window, 5:00–6:30 PM (Sun–Thu)
+//   !lunch in       → adds you to TODAY's list — works ONLY during the
+//                     order window, up to 11:15 AM (Mon–Fri)
 //   !lunch out      → cancels that booking — same window only
-//   !lunch          → today's + next day's count + window status
+//   !lunch          → today's count + window status
 //   !lunch menu     → a funny non-answer (the chef keeps secrets)
 //   !lunch thanks / hi / anything else → the bot has jokes
 //
-// ORDER WINDOW: 5:00–6:30 PM IST the evening before, Sun–Thu.
-// Sunday's window orders for Monday. Outside the window everything
-// is closed — no joins, no cancels (cancel attempts get the lecture).
+// ORDER WINDOW: morning-only. Open on a lunch day until 11:15 AM IST
+// (Mon–Fri). Outside the window everything is closed — no joins, no
+// cancels (cancel attempts get the lecture).
 //
 // DEPLOY: config.toml entry with verify_jwt = false, then
 //         supabase functions deploy basecamp-lunch
-import { admin, todayIST, tomorrowIST, nextLunchDateIST, isWeekendIST, orderWindowOpen, claimSend } from '../_shared/lib.js'
+import { admin, todayIST, isWeekendIST, orderWindowOpen, orderTargetDate, claimSend } from '../_shared/lib.js'
 
 const say = (html) =>
   new Response(html, {
@@ -27,10 +27,10 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 /* ---------------- the bot's personality ---------------- */
 
 const WINDOW_CLOSED_LINES = [
-  "Window's shut. Orders: <b>5:00–6:30 PM</b>. ⏰",
-  "Not order time. <b>5:00–6:30 PM</b> only. 😴",
-  "Register naps outside <b>5:00–6:30 PM</b>. See you then. 🍛",
-  "Closed. Set a 5 PM alarm, champion. ⏰",
+  "Window's shut. Orders close <b>11:15 AM</b>. ⏰",
+  "Not order time. Open <b>till 11:15 AM</b>, Mon–Fri. 😴",
+  "Register naps after <b>11:15 AM</b>. Catch it tomorrow morning. 🍛",
+  "Closed. Type <b>!lunch in</b> before <b>11:15 AM</b> next time. ⏰",
 ]
 
 const NO_CANCEL_SPEECH = [
@@ -72,8 +72,8 @@ const MENU_LINES = [
 ]
 
 const HELLO_LINES = [
-  "Hello! <b>!lunch in</b> (5:00–6:30 PM) books tomorrow. <b>!lunch</b> = count.",
-  "Vanakkam 🙏 in / out / count. Window: 5:00–6:30 PM.",
+  "Hello! <b>!lunch in</b> (before 11:15 AM) books today's plate. <b>!lunch</b> = count.",
+  "Vanakkam 🙏 in / out / count. Open till 11:15 AM, Mon–Fri.",
 ]
 
 const CONFUSED_LINES = [
@@ -129,17 +129,16 @@ Deno.serve(async (req) => {
       return say(pick(HELLO_LINES))
     }
     if (/^help$/.test(cmd)) {
-      return say('<b>in</b> = book tomorrow · <b>out</b> = cancel · <b>!lunch</b> = count. Window: <b>5:00–6:30 PM</b>, Sun–Thu.')
+      return say('<b>in</b> = add me today · <b>out</b> = cancel · <b>!lunch</b> = count. Open <b>till 11:15 AM</b>, Mon–Fri.')
     }
 
     const db = admin()
     const date = todayIST()
     const weekend = isWeekendIST()
     const windowOpen = orderWindowOpen()
-    // Orders always target the NEXT working lunch day (never Sat/Sun).
-    // Sun–Thu window → tomorrow; Fri/Sat → Monday.
-    const nextDate = nextLunchDateIST()
-    const nextWord = nextDate === tomorrowIST() ? `tomorrow (${nextDate})` : `Monday (${nextDate})`
+    // Everything is same-day now: the window only ever orders for TODAY.
+    const nextDate = orderTargetDate()
+    const nextWord = `today (${nextDate})`
 
     const { data: members } = await db
       .from('members')
@@ -166,7 +165,7 @@ Deno.serve(async (req) => {
     /* ---------- in ---------- */
     if (wantsIn && !wantsOut) {
       if (!windowOpen) {
-        return say(pick(WINDOW_CLOSED_LINES) + (weekend ? ' Monday orders: <b>Sunday 5 PM</b>.' : ''))
+        return say(pick(WINDOW_CLOSED_LINES) + (weekend ? ' Lunch is Mon–Fri — see you Monday morning. 🌴' : ''))
       }
       if (existing) return say(`<b>${member.name}</b>, already in for ${nextWord} (${pref}). 🍛`)
 
@@ -221,15 +220,15 @@ Deno.serve(async (req) => {
 
     /* ---------- bare !lunch → status ---------- */
     if (cmd === '' || /^(status|count|list|today|tomorrow)$/.test(cmd)) {
-      const [{ count: todayCount }, { count: nextCount }] = await Promise.all([
-        db.from('lunch_entries').select('*', { count: 'exact', head: true }).eq('lunch_date', date),
-        db.from('lunch_entries').select('*', { count: 'exact', head: true }).eq('lunch_date', nextDate),
-      ])
+      const { count: todayCount } = await db
+        .from('lunch_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('lunch_date', date)
 
       return say(
-        (weekend ? `Weekend — no lunch. 🌴 ` : `Today: <b>${todayCount}</b> plates. `) +
-        `${nextWord}: <b>${nextCount}</b>. You're <b>${existing ? 'in' : 'not in'}</b>, ${member.name}. ` +
-        (windowOpen ? `Window <b>OPEN</b> till 6:30 PM.` : `Window: <b>5:00–6:30 PM</b>${weekend ? ' Sunday' : ''}.`)
+        (weekend ? `Weekend — no lunch. 🌴 ` : `Today (${date}): <b>${todayCount}</b> plates. `) +
+        `You're <b>${existing ? 'in' : 'not in'}</b>, ${member.name}. ` +
+        (windowOpen ? `Window <b>OPEN</b> till 11:15 AM.` : `Closed. Opens ~10 AM, Mon–Fri.`)
       )
     }
 
@@ -240,5 +239,5 @@ Deno.serve(async (req) => {
     return say('Something broke on the register side. Try again in a minute, or use the dashboard.')
   }
 })
-// (Chef +1/−1 mails removed: the order window closes at 6:30 PM the
-// evening before, so the 11:00 chef list is always final.)
+// (Chef +1/−1 mails still fire from join/cancel if someone changes the
+// list after the 11:15 AM chef list has gone out.)

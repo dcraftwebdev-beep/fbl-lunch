@@ -81,7 +81,7 @@ export default function CancelLunch() {
             <p className={styles.msg}>
               {result?.status === 'already'
                 ? 'Already cancelled. Nothing more to do.'
-                : 'Plate is off the list. Rebook via the 5 PM email till 6:30 PM.'}
+                : 'Plate is off the list. Rebook with !lunch in on Basecamp before 11:15 AM.'}
             </p>
           </>
         )}

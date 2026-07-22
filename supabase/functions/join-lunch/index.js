@@ -1,17 +1,23 @@
-// join-lunch — the public link behind the 5 PM evening invite button.
-// GET ?m=<member_id>&d=<date>&s=<hmac>  → verifies the signed link,
-// inserts the lunch entry for that date — TOMORROW from the evening
-// invite, or today for same-day links (idempotent), tells the chef
-// (+1) if the 11:00 list already went out, and shows a friendly page.
+// join-lunch — the public "add me to today's lunch" action.
+//
+// DUAL-MODE, so the email button works no matter how it's opened:
+//   • GET  ?m=<id>&d=<date>&s=<hmac>   (button opens directly in a
+//          browser) → verifies, inserts, returns a friendly HTML page.
+//   • POST { m, d, s } (the /join React page fetches it) → same logic,
+//          returns JSON { ok, status, name, message } for the page.
+// Inserts today's entry (idempotent) and tells the chef (+1) if the
+// 11:15 list already went out.
 //
 // DEPLOY WITH:  supabase functions deploy join-lunch --no-verify-jwt
 // (the button opens in a plain browser with no auth header — without
 //  this flag Supabase's gateway blocks it before your code runs)
 import {
   admin,
+  cors,
+  json,
   sendEmail,
   shell,
-  nextLunchDateIST,
+  todayIST,
   orderWindowOpen,
   htmlPage,
   verifyJoin,
@@ -22,37 +28,50 @@ Deno.serve(async (req) => {
   // Email scanners often prefetch links with HEAD — answer empty,
   // change nothing, so a scanner can't register anyone.
   if (req.method === 'HEAD') return new Response(null, { status: 200 })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+
+  // Params come from the query (GET link) or the JSON body (POST fetch).
+  const isPost = req.method === 'POST'
+  let m, d, s
+  if (isPost) {
+    const body = await req.json().catch(() => ({}))
+    ;({ m, d, s } = body)
+  } else {
+    const url = new URL(req.url)
+    m = url.searchParams.get('m')
+    d = url.searchParams.get('d')
+    s = url.searchParams.get('s')
+  }
+
+  // Reply in the caller's language: JSON for the app fetch, HTML for a browser.
+  const reply = (ok, title, msg, extra = {}) =>
+    isPost ? json({ ok, message: msg, ...extra }) : htmlPage(title, msg, ok)
 
   try {
-    const url = new URL(req.url)
-    const memberId = url.searchParams.get('m')
-    const date = url.searchParams.get('d')
-    const sig = url.searchParams.get('s')
-
-    if (!memberId || !date || !sig) {
-      return htmlPage('Broken link', 'Open the button from your email again.', false)
+    if (!m || !d || !s) {
+      return reply(false, 'Broken link', "Open the button from today's email again.")
     }
-    if (!(await verifyJoin(memberId, date, sig))) {
-      return htmlPage('Invalid link', 'Use the button from the latest email.', false)
+    if (!(await verifyJoin(m, d, s))) {
+      return reply(false, 'Invalid link', 'Use the button from the latest email.')
     }
-    if (date !== nextLunchDateIST()) {
-      return htmlPage('Link expired', 'Old link. Wait for the next 5 PM email.', false)
+    // The link is only valid for TODAY's lunch (same-day ordering).
+    if (d !== todayIST()) {
+      return reply(false, 'Link expired', 'Old link — it was only good for its own lunch day.')
     }
     if (!orderWindowOpen()) {
-      return htmlPage('Ordering closed', 'Window is 5:00–6:30 PM. Closed for this lunch.', false)
+      return reply(false, 'Ordering closed', 'The window closes at 11:15 AM. Come back tomorrow morning.')
     }
-    const dayWord = 'tomorrow'
 
     const db = admin()
 
     const { data: member } = await db
       .from('members')
       .select('id, name, email, food_pref, active')
-      .eq('id', memberId)
+      .eq('id', m)
       .maybeSingle()
 
     if (!member || !member.active) {
-      return htmlPage('Not on the roster', 'Ask the register admin to add you back.', false)
+      return reply(false, 'Not on the roster', 'Ask the register admin to add you back.')
     }
 
     // Already in? Say so warmly, change nothing.
@@ -60,39 +79,46 @@ Deno.serve(async (req) => {
       .from('lunch_entries')
       .select('id')
       .eq('member_id', member.id)
-      .eq('lunch_date', date)
+      .eq('lunch_date', d)
       .maybeSingle()
 
     if (existing) {
-      return htmlPage(`Already on the list, ${member.name}`, `Your ${dayWord} plate (${date}) is already marked. 🍛`)
+      return reply(
+        true,
+        `Already on the list, ${member.name}`,
+        `Your plate for today (${d}) is already marked. 🍛`,
+        { status: 'already', name: member.name }
+      )
     }
 
     const { error: insErr } = await db
       .from('lunch_entries')
-      .insert({ member_id: member.id, lunch_date: date })
+      .insert({ member_id: member.id, lunch_date: d })
     if (insErr) throw insErr
 
-    // If the 11:00 chef list already went out (late click), send a +1.
+    // If the 11:15 chef list already went out (late click), send a +1.
     const { data: settings } = await db.from('app_settings').select('chef_email').eq('id', 1).single()
-    if (settings?.chef_email && (await chefListSent(db, date))) {
+    if (settings?.chef_email && (await chefListSent(db, d))) {
       const { count } = await db
         .from('lunch_entries')
         .select('*', { count: 'exact', head: true })
-        .eq('lunch_date', date)
+        .eq('lunch_date', d)
       await sendEmail(
         settings.chef_email,
         `Lunch +1: ${member.name} — now ${count} plates`,
-        shell('Lunch update: +1', `<p><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) joined via the email button after the 11:00 list.</p>
+        shell('Lunch update: +1', `<p><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) joined via the email button after the 11:15 list.</p>
           <p style="font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
       )
     }
 
-    return htmlPage(
+    return reply(
+      true,
       `You're in, ${member.name} 🍛`,
-      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for ${dayWord} (${date}).`
+      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for today (${d}).`,
+      { status: 'added', name: member.name }
     )
   } catch (err) {
     console.error(err)
-    return htmlPage('Something went wrong', 'Try the button once more.', false)
+    return reply(false, 'Something went wrong', 'Try the button once more.')
   }
 })

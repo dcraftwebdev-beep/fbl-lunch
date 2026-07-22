@@ -1,28 +1,24 @@
 -- ============================================================
--- FULL cron setup — EVENING ORDERING FLOW (paste & run in the
+-- FULL cron setup — MORNING-ONLY SAME-DAY FLOW (paste & run in the
 -- Supabase SQL Editor). Safe to re-run: it removes any old jobs
 -- first, then schedules the complete set.
 --
--- WHY THE AUTO MESSAGE WASN'T WORKING: the previous version of
--- this file only scheduled 3 jobs (chef list, last call, funny).
--- The invite and confirmation crons were never added, so those
--- auto messages never fired.
+-- LUNCH DAYS: Monday–Friday. Default members (Dinesh, Jey, Ajey,
+-- Dipak, Lazzo) are IN by default every lunch day.
 --
--- LUNCH DAYS: Monday–Friday only (Sat & Sun the office is off).
--- ORDER WINDOW: 5:00–6:30 PM IST the evening before, Sun–Thu.
---   Sun–Thu 17:00 IST → evening invite: "order lunch for TOMORROW"
---                        (Sunday's run asks about Monday)
---   Sun–Thu 18:15 IST → last call: 15 minutes to the 6:30 PM close
---   Fri     17:00 IST → funny "kitchen closed, see you Monday" message
---   Sat               → nothing
+-- ORDER WINDOW: same day only. Open every lunch morning until it
+-- CLOSES at 11:15 AM IST. !lunch in / !lunch out and the email
+-- buttons all work up to 11:15 AM. There is NO evening ordering.
+--
+--   Mon–Fri 10:00 IST → morning-invite: auto-add defaults + post
+--                       today's list to Basecamp (!lunch in/out)
+--   Mon–Fri 11:00 IST → midday-confirm: reminder post ("15 min left")
+--   Mon–Fri 11:15 IST → last-call: post TODAY's final list to Basecamp
+--                     + send-chef-list (today's FINAL list to the chef)
+--                     + daily-funny mails
 --
 -- Times are UTC (IST = UTC + 5:30):
---   11:30 UTC = 17:00 IST → evening invite (Sun–Thu) / weekend funny (Fri)
---   12:45 UTC = 18:15 IST → last call in Basecamp (Sun–Thu)
---   13:00 UTC = 18:30 IST → chef list for NEXT day — window just
---                           closed, orders are final (Sun–Thu)
---   05:31 UTC = 11:01 IST → member confirmations (Mon–Fri)
---   05:45 UTC = 11:15 IST → daily funny mails (Mon–Fri)
+--   04:30 UTC = 10:00 IST   ·   05:30 UTC = 11:00 IST   ·   05:45 UTC = 11:15 IST
 -- ============================================================
 
 create extension if not exists pg_cron;
@@ -38,10 +34,15 @@ begin
     'lunch-daily-funny-1115am-ist',
     'lunch-last-call-1110am-ist',
     'lunch-morning-invite-10am-ist',
+    'lunch-midday-reminder-11am-ist',
     'lunch-midday-confirm-11am-ist',
     'lunch-evening-invite-5pm-ist',
     'lunch-weekend-funny-fri5pm-ist',
-    'lunch-last-call-615pm-ist'
+    'lunch-last-call-615pm-ist',
+    'lunch-evening-mail-630pm-ist',
+    'lunch-chef-preview-630pm-ist',
+    'lunch-finalise-1115am-ist',
+    'lunch-chef-final-1115am-ist'
   ] loop
     begin
       perform cron.unschedule(j);
@@ -51,13 +52,13 @@ begin
 end
 $do$;
 
--- ---- 17:00 IST, Sun–Thu: invite everyone to order for TOMORROW ----
+-- ---- 10:00 IST, Mon–Fri: defaults IN + post today's list to Basecamp ----
 select cron.schedule(
-  'lunch-evening-invite-5pm-ist',
-  '30 11 * * 0-4',
+  'lunch-morning-invite-10am-ist',
+  '30 4 * * 1-5',
   $$
   select net.http_post(
-    url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/evening-invite',
+    url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/morning-invite',
     headers := jsonb_build_object(
       'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cXJkZHVtcmZibGpxbWFraXZ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDAwMjY3NiwiZXhwIjoyMDk5NTc4Njc2fQ.d4jmYhaSxls0sfyd54HeN69YGjvzbVa-tBTsFZ-hgxk',
       'Content-Type',  'application/json'
@@ -67,45 +68,10 @@ select cron.schedule(
   $$
 );
 
--- ---- 17:00 IST, Friday: funny "see you Monday" message ----
+-- ---- 11:00 IST, Mon–Fri: reminder post ("15 minutes left") ----
 select cron.schedule(
-  'lunch-weekend-funny-fri5pm-ist',
-  '30 11 * * 5',
-  $$
-  select net.http_post(
-    url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/weekend-funny',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cXJkZHVtcmZibGpxbWFraXZ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDAwMjY3NiwiZXhwIjoyMDk5NTc4Njc2fQ.d4jmYhaSxls0sfyd54HeN69YGjvzbVa-tBTsFZ-hgxk',
-      'Content-Type',  'application/json'
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-
--- ---- 18:30 IST, Sun–Thu: chef gets the NEXT day's final list ----
--- Fires the moment the 5:00–6:30 PM order window closes, so the plates
--- just booked (tomorrow's lunch; Sunday's run = Monday) go straight to
--- the kitchen. target=next tells the function to use the next lunch day.
-select cron.schedule(
-  'lunch-chef-list-630pm-ist',
-  '0 13 * * 0-4',
-  $$
-  select net.http_post(
-    url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/send-chef-list',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cXJkZHVtcmZibGpxbWFraXZ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDAwMjY3NiwiZXhwIjoyMDk5NTc4Njc2fQ.d4jmYhaSxls0sfyd54HeN69YGjvzbVa-tBTsFZ-hgxk',
-      'Content-Type',  'application/json'
-    ),
-    body := '{"target":"next"}'::jsonb
-  );
-  $$
-);
-
--- ---- 11:01 IST, Mon–Fri: members on today's list get confirmations ----
-select cron.schedule(
-  'lunch-midday-confirm-11am-ist',
-  '31 5 * * 1-5',
+  'lunch-midday-reminder-11am-ist',
+  '30 5 * * 1-5',
   $$
   select net.http_post(
     url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/midday-confirm',
@@ -118,10 +84,10 @@ select cron.schedule(
   $$
 );
 
--- ---- 18:15 IST, Sun–Thu: last call — window closes 6:30 PM ----
+-- ---- 11:15 IST, Mon–Fri: post TODAY's final list to Basecamp ----
 select cron.schedule(
-  'lunch-last-call-615pm-ist',
-  '45 12 * * 0-4',
+  'lunch-finalise-1115am-ist',
+  '45 5 * * 1-5',
   $$
   select net.http_post(
     url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/last-call',
@@ -130,6 +96,22 @@ select cron.schedule(
       'Content-Type',  'application/json'
     ),
     body := '{}'::jsonb
+  );
+  $$
+);
+
+-- ---- 11:15 IST, Mon–Fri: chef gets TODAY's final list ----
+select cron.schedule(
+  'lunch-chef-final-1115am-ist',
+  '45 5 * * 1-5',
+  $$
+  select net.http_post(
+    url     := 'https://awqrddumrfbljqmakivv.supabase.co/functions/v1/send-chef-list',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cXJkZHVtcmZibGpxbWFraXZ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDAwMjY3NiwiZXhwIjoyMDk5NTc4Njc2fQ.d4jmYhaSxls0sfyd54HeN69YGjvzbVa-tBTsFZ-hgxk',
+      'Content-Type',  'application/json'
+    ),
+    body := '{"target":"today"}'::jsonb
   );
   $$
 );
@@ -150,10 +132,5 @@ select cron.schedule(
   $$
 );
 
--- ---- verify: you should see exactly 6 jobs ----
+-- ---- verify: you should see exactly 5 jobs ----
 select jobname, schedule, active from cron.job order by jobname;
-
--- Recent run history (check status = 'succeeded'):
---   select jobname, status, return_message, start_time
---   from cron.job_run_details d join cron.job j on j.jobid = d.jobid
---   order by start_time desc limit 20;

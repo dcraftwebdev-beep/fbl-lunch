@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
                <a href="${cancelUrl}"
                   style="background:#c03b2b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">
                   Cancel my lunch</a></p>
-             <p style="color:#5a645c;font-size:13px">Cancel works till <b>6:30 PM</b>. Do nothing = plate cooked.</p>`
+             <p style="color:#5a645c;font-size:13px">Cancel works till <b>11:15 AM</b>. Do nothing = plate cooked.</p>`
           )
           await sendEmail(member.email, `You're in for lunch (${date})`, html)
           results.member_mail = true

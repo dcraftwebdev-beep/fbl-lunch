@@ -45,8 +45,10 @@ export default function MembersPanel({ data }) {
       <h2 className={styles.heading}>Team roster</h2>
       <p className={styles.sub}>
         Everyone here appears in the @ roll call. Emails power the confirmation,
-        cancel-link and daily mails. Click a name or email to edit it. Mark someone
-        as left to keep their history, or remove them to delete their history too.
+        cancel-link and daily mails. Click a name or email to edit it. Toggle
+        <b> ★ default</b> to auto-add someone to lunch every day (the bot posts this
+        list to the group each morning). Mark someone as left to keep their history,
+        or remove them to delete their history too.
       </p>
 
       <div className={styles.addRow}>
@@ -163,6 +165,16 @@ export default function MembersPanel({ data }) {
                   title="Switch food preference"
                 >
                   {m.food_pref === 'veg' ? 'veg' : 'non-veg'}
+                </button>
+
+                <button
+                  className={m.is_default ? styles.defaultOn : styles.smallBtn}
+                  onClick={() => updateMember(m.id, { is_default: !m.is_default })}
+                  title={m.is_default
+                    ? 'In lunch by default every day — click to remove from the default list'
+                    : 'Add to the daily default lunch list (auto-added every lunch day)'}
+                >
+                  {m.is_default ? '★ default' : '☆ default'}
                 </button>
 
                 <button

@@ -20,7 +20,8 @@ import { isLive, supabaseClient } from './store'
 const AUTH_KEY = 'fbl-lunch-auth-v1'
 const REMEMBER_TOKEN = 'authed'
 
-// ---- demo-mode fallback password ----
+// ---- demo-mode fallback credentials ----
+const DEMO_USERNAME = import.meta.env.VITE_APP_USERNAME || 'admin'
 const DEMO_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'firebrand-lunch'
 export const USING_DEFAULT_PASSWORD = isLive ? false : !import.meta.env.VITE_APP_PASSWORD
 
@@ -43,18 +44,20 @@ export const logout = () => {
 
 const authFn = (body) => supabaseClient.functions.invoke('dashboard-auth', { body })
 
-// Verify a password. Returns { ok, error? }.
-export const login = async (attempt) => {
+// Verify username + password. Returns { ok, error? }.
+export const login = async (username, attempt) => {
   if (!isLive) {
-    const ok = (attempt ?? '') === DEMO_PASSWORD
+    const ok =
+      (username ?? '').trim().toLowerCase() === DEMO_USERNAME.toLowerCase() &&
+      (attempt ?? '') === DEMO_PASSWORD
     if (ok) remember()
-    return { ok, error: ok ? undefined : 'Wrong password.' }
+    return { ok, error: ok ? undefined : 'Wrong username or password.' }
   }
   try {
-    const { data, error } = await authFn({ action: 'login', password: attempt })
+    const { data, error } = await authFn({ action: 'login', username, password: attempt })
     if (error) return { ok: false, error: 'Could not reach the server. Try again.' }
     if (data?.ok) { remember(); return { ok: true } }
-    return { ok: false, error: data?.error || 'Wrong password.' }
+    return { ok: false, error: data?.error || 'Wrong username or password.' }
   } catch {
     return { ok: false, error: 'Could not reach the server. Try again.' }
   }

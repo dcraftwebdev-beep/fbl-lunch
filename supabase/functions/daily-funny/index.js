@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
          <p style="font-size:16px">${line}</p>
          ${ordered
             ? '<p style="color:#5a645c;font-size:13px">Plate\'s cooking. Carry on. 🍛</p>'
-            : '<p style="color:#5a645c;font-size:13px">Book tomorrow: 5:00–6:30 PM this evening.</p>'}`
+            : '<p style="color:#5a645c;font-size:13px">Next time: type <b>!lunch in</b> before 11:15 AM.</p>'}`
       )
 
       try {

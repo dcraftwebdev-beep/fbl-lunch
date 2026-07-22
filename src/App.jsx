@@ -12,50 +12,72 @@ import ExportPanel from './components/ExportPanel'
 import ChefCard from './components/ChefCard'
 import MembersPanel from './components/MembersPanel'
 import Toast from './components/Toast'
+import TasksView from './modules/tasks/TasksView'
+
+function LunchRegisterWrapper({ notify, data }) {
+  const [authed, setAuthed] = useState(isAuthed)
+
+  if (!authed) return <Login onSuccess={() => setAuthed(true)} />
+
+  return (
+    <div className={styles.lunchWrapper}>
+      {data.error && <div className={styles.errorBar} role="alert">{data.error}</div>}
+
+      {data.loading ? (
+        <div className={styles.loading}>Setting the table…</div>
+      ) : (
+        <>
+          <div className={styles.topGrid}>
+            <TodayPanel data={data} />
+            <StatsRow data={data} />
+          </div>
+
+          <RegisterTable data={data} />
+
+          <div className={styles.bottomGrid}>
+            <div className={styles.leftStack}>
+              <ChefCard data={data} />
+              <ExportPanel data={data} notify={notify} />
+            </div>
+            <MembersPanel data={data} />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function App() {
   const [toast, setToast] = useState(null)
+  const [activeModule, setActiveModule] = useState('tasks') // 'tasks' or 'lunch'
   const [authed, setAuthed] = useState(isAuthed)
 
   const notify = useCallback((message, tone = 'ok') => {
     setToast({ message, tone, key: Date.now() })
   }, [])
 
-  const data = useLunchData(notify)
-
-  if (!authed) return <Login onSuccess={() => setAuthed(true)} />
+  const lunchData = useLunchData(notify)
 
   return (
     <div className={styles.page}>
-      <Header live={isLive} onLogout={() => { logout(); setAuthed(false) }} />
+      <Header 
+        live={isLive} 
+        onLogout={() => { logout(); setAuthed(false) }} 
+        activeModule={activeModule}
+        onSwitchModule={setActiveModule}
+        authed={authed}
+      />
 
       <main className={styles.main}>
-        {data.error && <div className={styles.errorBar} role="alert">{data.error}</div>}
-
-        {data.loading ? (
-          <div className={styles.loading}>Setting the table…</div>
+        {activeModule === 'tasks' ? (
+          <TasksView notify={notify} />
         ) : (
-          <>
-            <div className={styles.topGrid}>
-              <TodayPanel data={data} />
-              <StatsRow data={data} />
-            </div>
-
-            <RegisterTable data={data} />
-
-            <div className={styles.bottomGrid}>
-              <div className={styles.leftStack}>
-                <ChefCard data={data} />
-                <ExportPanel data={data} notify={notify} />
-              </div>
-              <MembersPanel data={data} />
-            </div>
-          </>
+          <LunchRegisterWrapper notify={notify} data={lunchData} />
         )}
       </main>
 
       <footer className={styles.footer}>
-        firebrand labs · internal lunch register
+        firebrand labs · internal portal
         {!isLive && <span className={styles.demoNote}> · running in demo mode — add Supabase keys in .env to go live</span>}
       </footer>
 
