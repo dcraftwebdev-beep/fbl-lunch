@@ -45,6 +45,58 @@
   cursor: default;
 }
 
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kitchenBtn {
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  transition: all 0.15s;
+}
+
+.kitchenBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.kitchenBtnOn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.kitchenBtnOn:hover {
+  color: #fff;
+  background: #a5301f;
+}
+
+.noCookBanner {
+  background: var(--flame-soft, #fdece8);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm, 10px);
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.noCookBanner code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
 /* ---------- composer ---------- */
 
 .composer {

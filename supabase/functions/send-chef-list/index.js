@@ -14,9 +14,11 @@ import {
   sendEmail,
   shell,
   todayIST,
+  fmtDate,
   nextLunchDateIST,
   claimSend,
   lunchRoster,
+  isNoCookingDay,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -28,6 +30,10 @@ Deno.serve(async (req) => {
     const date = target === 'next' ? nextLunchDateIST() : todayIST()
 
     const db = admin()
+
+    if (await isNoCookingDay(db, date)) {
+      return json({ ok: true, target, date, skipped: 'no_cooking' })
+    }
 
     const { data: settings } = await db.from('app_settings').select('chef_email, chef_name').eq('id', 1).single()
     if (!settings?.chef_email) return json({ error: 'Chef email not set' }, 400)
@@ -49,7 +55,7 @@ Deno.serve(async (req) => {
 
     const html = shell(
       `${label}'s lunch — ${total} plates`,
-      `<p>Hi ${settings.chef_name || 'Chef'} — here's the list for <b>${date}</b>.</p>
+      `<p>Hi ${settings.chef_name || 'Chef'} — here's the list for <b>${fmtDate(date)}</b>.</p>
        <p style="font-size:17px;margin:14px 0">
          <b>${total}</b> plates &nbsp;·&nbsp; 🟢 ${veg.length} veg &nbsp;·&nbsp; 🔴 ${nonveg.length} non-veg
          ${guests ? `&nbsp;·&nbsp; 👥 ${guests} guest${guests > 1 ? 's' : ''}` : ''}
@@ -59,7 +65,7 @@ Deno.serve(async (req) => {
        <p style="color:#5a645c;font-size:13px;margin-top:16px">${target === 'next' ? 'Preview — final list arrives at 11:15 AM.' : 'Final list. Any change after this comes as a +1 / −1 update.'}</p>`
     )
 
-    await sendEmail(settings.chef_email, `${label}'s lunch: ${total} plates (${date})`, html)
+    await sendEmail(settings.chef_email, `${label}'s lunch: ${total} plates (${fmtDate(date)})`, html)
 
     return json({ ok: true, target, date, plates: total, veg: veg.length, nonveg: nonveg.length, guests })
   } catch (err) {

@@ -173,10 +173,26 @@ export function useLunchData(notify) {
     }
   }, [notify])
 
+  // "No cooking today" toggle — optimistic flag + server announce to the group.
+  const setKitchenClosed = useCallback(async (closed) => {
+    setDayMeta((prev) => ({
+      ...prev,
+      [today]: { lunch_date: today, guest_count: 0, note: '', ...prev[today], no_cooking: closed },
+    }))
+    try {
+      await store.setKitchenClosed(closed)
+      notify(closed ? 'Kitchen closed — team told to eat outside 🙏' : 'Kitchen reopened for today 🍛')
+    } catch (err) {
+      console.error(err)
+      notify('Could not update kitchen status — try again', 'error')
+      refresh()
+    }
+  }, [today, notify, refresh])
+
   return {
     today, days, members, entries, dayMeta, loading, error, settings,
     isIn, todayMemberIds,
     toggleEntry, addToday, copyYesterday, setMeta, addMember, updateMember, deleteMember,
-    updateSettings, sendChefList,
+    updateSettings, sendChefList, setKitchenClosed,
   }
 }

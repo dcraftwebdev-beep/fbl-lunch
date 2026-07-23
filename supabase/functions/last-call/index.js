@@ -12,10 +12,12 @@ import {
   cors,
   json,
   todayIST,
+  fmtDate,
   claimSend,
   postToBasecamp,
   lunchRoster,
   rosterNamesHtml,
+  isNoCookingDay,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -25,13 +27,16 @@ Deno.serve(async (req) => {
     const db = admin()
     const date = todayIST()
 
+    if (await isNoCookingDay(db, date)) {
+      return json({ ok: true, date, skipped: 'no_cooking' })
+    }
     if (!(await claimSend(db, 'bc_finalise', date))) {
       return json({ ok: true, date, skipped: 'already posted' })
     }
 
     const roster = await lunchRoster(db, date)
     await postToBasecamp(
-      `🔒 <b>Today's lunch list (${date}) — final</b><br>` +
+      `🔒 <b>Today's lunch list (${fmtDate(date)}) — final</b><br>` +
       `${rosterNamesHtml(roster)}<br><br>` +
       `<b>${roster.length}</b> plates going to the kitchen. Window reopens tomorrow morning. 🍛`
     )

@@ -24,12 +24,14 @@ import {
   sendEmail,
   shell,
   todayIST,
+  fmtDate,
   claimSend,
   signJoin,
   postToBasecamp,
   ensureDefaultMembers,
   lunchRoster,
   rosterNamesHtml,
+  isNoCookingDay,
 } from '../_shared/lib.js'
 
 const BTN_PRIMARY =
@@ -43,6 +45,13 @@ Deno.serve(async (req) => {
   try {
     const db = admin()
     const date = todayIST()
+
+    // Kitchen closed today? Skip the whole morning flow (the toggle already
+    // announced "eat outside" in the group).
+    if (await isNoCookingDay(db, date)) {
+      return json({ ok: true, date, skipped: 'no_cooking' })
+    }
+
     const app = Deno.env.get('APP_URL') // optional
     const fnBase = `${Deno.env.get('SUPABASE_URL')}/functions/v1`
 
@@ -76,7 +85,7 @@ Deno.serve(async (req) => {
         'Lunch today? 🍛',
         `<p>Hi ${m.name},</p>
          <p>The office kitchen is cooking. Want a fresh
-            <b>${m.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate today (${date})?</p>
+            <b>${m.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate today (${fmtDate(date)})?</p>
          <p style="margin:22px 0">
            <a href="${orderUrl}" style="${BTN_PRIMARY}">🍛 Order lunch — I'm in</a>
            ${registerBtn ? `&nbsp;&nbsp;${registerBtn}` : ''}
@@ -86,7 +95,7 @@ Deno.serve(async (req) => {
       )
 
       try {
-        await sendEmail(m.email, `Lunch today? One click to order (${date})`, html)
+        await sendEmail(m.email, `Lunch today? One click to order (${fmtDate(date)})`, html)
         mailed++
       } catch (err) {
         console.error(`morning-invite → ${m.email}:`, err)
@@ -98,7 +107,7 @@ Deno.serve(async (req) => {
     if (await claimSend(db, 'bc_morning', date)) {
       const roster = await lunchRoster(db, date)
       await postToBasecamp(
-        `🍛 <b>Lunch list for today (${date})</b><br>` +
+        `🍛 <b>Lunch list for today (${fmtDate(date)})</b><br>` +
         `${rosterNamesHtml(roster)}<br><br>` +
         `Want in? Type <b>!lunch in</b>. Not coming? Type <b>!lunch out</b>.<br>` +
         `Open till <b>11:15 AM</b>. Current count: <b>${roster.length}</b> plates.`

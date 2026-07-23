@@ -37,7 +37,7 @@ const nowISTMinutes = () => {
 }
 
 export default function TodayPanel({ data }) {
-  const { members, today, todayMemberIds, addToday, toggleEntry, copyYesterday, dayMeta, setMeta } = data
+  const { members, today, todayMemberIds, addToday, toggleEntry, copyYesterday, dayMeta, setMeta, setKitchenClosed } = data
 
   const [text, setText] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -67,6 +67,13 @@ export default function TodayPanel({ data }) {
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const meta = dayMeta[today] || { guest_count: 0, note: '' }
+  const noCooking = !!meta.no_cooking
+  const toggleKitchen = () => {
+    if (!noCooking && !window.confirm(
+      "Announce to the group that there's NO office food today and everyone should eat outside?\n\nThe bot will also turn away !lunch in / !lunch out for today."
+    )) return
+    setKitchenClosed(!noCooking)
+  }
   const inSet = new Set(todayMemberIds)
   const activeMembers = members.filter((m) => m.active)
   const todayMembers = activeMembers.filter((m) => inSet.has(m.id))
@@ -158,15 +165,33 @@ export default function TodayPanel({ data }) {
     <section className={styles.panel} aria-label="Today's lunch">
       <div className={styles.headRow}>
         <h2 className={styles.heading}>Who's in for lunch today?</h2>
-        <button
-          className={styles.copyBtn}
-          onClick={tryCopyYesterday}
-          disabled={ordersClosed}
-          title={ordersClosed ? 'Orders closed for today' : undefined}
-        >
-          Copy yesterday's list
-        </button>
+        <div className={styles.headActions}>
+          <button
+            className={`${styles.kitchenBtn} ${noCooking ? styles.kitchenBtnOn : ''}`}
+            onClick={toggleKitchen}
+            title={noCooking
+              ? 'Kitchen marked closed for today — click to reopen ordering'
+              : 'Mark today as no cooking & tell the group to eat outside'}
+          >
+            {noCooking ? '🍳 Reopen kitchen' : '🙅 No cooking today'}
+          </button>
+          <button
+            className={styles.copyBtn}
+            onClick={tryCopyYesterday}
+            disabled={ordersClosed || noCooking}
+            title={ordersClosed ? 'Orders closed for today' : undefined}
+          >
+            Copy yesterday's list
+          </button>
+        </div>
       </div>
+
+      {noCooking && (
+        <div className={styles.noCookBanner} role="status">
+          🙅 <b>No office food today.</b> The group has been told to eat outside, and the bot is
+          turning away <code>!lunch in / !lunch out</code>. Click <b>Reopen kitchen</b> to resume ordering.
+        </div>
+      )}
 
       <div className={styles.composer} ref={composerRef}>
         <input

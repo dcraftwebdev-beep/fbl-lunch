@@ -25,6 +25,10 @@ entrypoint = "./functions/morning-invite/index.js"
 [functions.midday-confirm]
 entrypoint = "./functions/midday-confirm/index.js"
 
+# Dashboard "No cooking today" switch → announces + turns away orders.
+[functions.kitchen-toggle]
+entrypoint = "./functions/kitchen-toggle/index.js"
+
 [functions.join-lunch]
 entrypoint = "./functions/join-lunch/index.js"
 # The join button in emails must work without login:

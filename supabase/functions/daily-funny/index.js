@@ -4,7 +4,7 @@
 // Lines rotate by day-of-year so the message changes every day.
 import {
   admin, cors, json, sendEmail, shell, todayIST, dayOfYear, claimSend,
-  ORDERED_LINES, NOT_ORDERED_LINES,
+  ORDERED_LINES, NOT_ORDERED_LINES, isNoCookingDay,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -14,6 +14,10 @@ Deno.serve(async (req) => {
     const db = admin()
     const date = todayIST()
     const day = dayOfYear()
+
+    if (await isNoCookingDay(db, date)) {
+      return json({ ok: true, date, skipped: 'no_cooking' })
+    }
 
     const [{ data: members }, { data: entries }] = await Promise.all([
       db.from('members').select('*').eq('active', true).neq('email', ''),

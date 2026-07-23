@@ -14,7 +14,7 @@
 //
 // DEPLOY: config.toml entry with verify_jwt = false, then
 //         supabase functions deploy basecamp-lunch
-import { admin, todayIST, isWeekendIST, orderWindowOpen, orderTargetDate, claimSend } from '../_shared/lib.js'
+import { admin, todayIST, isWeekendIST, orderWindowOpen, orderTargetDate, claimSend, fmtDate, isNoCookingDay } from '../_shared/lib.js'
 
 const say = (html) =>
   new Response(html, {
@@ -138,7 +138,15 @@ Deno.serve(async (req) => {
     const windowOpen = orderWindowOpen()
     // Everything is same-day now: the window only ever orders for TODAY.
     const nextDate = orderTargetDate()
-    const nextWord = `today (${nextDate})`
+    const nextWord = `today (${fmtDate(nextDate)})`
+
+    // Kitchen closed today? Turn away all in/out/status with a friendly note.
+    if (await isNoCookingDay(db, nextDate)) {
+      return say(
+        `🙅 <b>No office food today (${fmtDate(nextDate)}).</b> ` +
+        `Kavitha akka isn't cooking — please eat outside today. 🙏`
+      )
+    }
 
     const { data: members } = await db
       .from('members')
@@ -226,7 +234,7 @@ Deno.serve(async (req) => {
         .eq('lunch_date', date)
 
       return say(
-        (weekend ? `Weekend — no lunch. 🌴 ` : `Today (${date}): <b>${todayCount}</b> plates. `) +
+        (weekend ? `Weekend — no lunch. 🌴 ` : `Today (${fmtDate(date)}): <b>${todayCount}</b> plates. `) +
         `You're <b>${existing ? 'in' : 'not in'}</b>, ${member.name}. ` +
         (windowOpen ? `Window <b>OPEN</b> till 11:15 AM.` : `Closed. Opens ~10 AM, Mon–Fri.`)
       )

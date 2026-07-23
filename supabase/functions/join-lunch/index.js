@@ -18,6 +18,7 @@ import {
   sendEmail,
   shell,
   todayIST,
+  fmtDate,
   orderWindowOpen,
   htmlPage,
   verifyJoin,
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
       return reply(
         true,
         `Already on the list, ${member.name}`,
-        `Your plate for today (${d}) is already marked. 🍛`,
+        `Your plate for today (${fmtDate(d)}) is already marked. 🍛`,
         { status: 'already', name: member.name }
       )
     }
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
     return reply(
       true,
       `You're in, ${member.name} 🍛`,
-      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for today (${d}).`,
+      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for today (${fmtDate(d)}).`,
       { status: 'added', name: member.name }
     )
   } catch (err) {

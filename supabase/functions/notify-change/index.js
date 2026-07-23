@@ -3,7 +3,7 @@
 //   body: { member_id, action: 'added' | 'removed' }
 // added   → member gets a confirmation mail with a "Cancel my lunch" link
 // both    → if the chef's 11:00 list already went out, the chef gets a +1 / −1 update
-import { admin, cors, json, sendEmail, shell, todayIST, claimSend, chefListSent } from '../_shared/lib.js'
+import { admin, cors, json, sendEmail, shell, todayIST, fmtDate, claimSend, chefListSent } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -40,14 +40,14 @@ Deno.serve(async (req) => {
           const cancelUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/cancel-lunch?token=${entry.cancel_token}`
           const html = shell(
             'You have lunch today 🍛',
-            `<p>Hi ${member.name} — your <b>${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate is booked (${date}).</p>
+            `<p>Hi ${member.name} — your <b>${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate is booked (${fmtDate(date)}).</p>
              <p style="margin:20px 0">
                <a href="${cancelUrl}"
                   style="background:#c03b2b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">
                   Cancel my lunch</a></p>
              <p style="color:#5a645c;font-size:13px">Cancel works till <b>11:15 AM</b>. Do nothing = plate cooked.</p>`
           )
-          await sendEmail(member.email, `You're in for lunch (${date})`, html)
+          await sendEmail(member.email, `You're in for lunch (${fmtDate(date)})`, html)
           results.member_mail = true
         }
       }

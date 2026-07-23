@@ -36,6 +36,15 @@ export async function sendEmail(to, subject, html) {
 export const todayIST = () =>
   new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
 
+// Human-friendly date for ALL user-facing text: '2026-07-23' → '23-07-2026'.
+// (Keep raw ISO 'yyyy-mm-dd' for DB values and signed link params — only
+//  use this for display.)
+export const fmtDate = (iso) => {
+  if (!iso || typeof iso !== 'string') return iso || ''
+  const [y, m, d] = iso.split('-')
+  return d && m && y ? `${d}-${m}-${y}` : iso
+}
+
 // Tomorrow's date in IST — kept for any next-day helpers/previews.
 export const tomorrowIST = () =>
   new Date(Date.now() + (24 + 5.5) * 3600 * 1000).toISOString().slice(0, 10)
@@ -113,6 +122,17 @@ export async function ensureDefaultMembers(db, date) {
     await db.from('lunch_entries').insert(toAdd.map((m) => ({ member_id: m.id, lunch_date: date })))
   }
   return toAdd
+}
+
+// Is the kitchen closed (no cooking) on this date? Set via the dashboard
+// "No cooking today" toggle → day_meta.no_cooking.
+export async function isNoCookingDay(db, date) {
+  const { data } = await db
+    .from('day_meta')
+    .select('no_cooking')
+    .eq('lunch_date', date)
+    .maybeSingle()
+  return !!data?.no_cooking
 }
 
 // Fetch the list of members on a given lunch date, with veg/non-veg.

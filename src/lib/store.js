@@ -125,6 +125,13 @@ const supabaseStore = {
     if (error) throw error
     return data
   },
+
+  // Toggle "No cooking today" — sets the flag AND announces to the group.
+  async setKitchenClosed(closed) {
+    const { data, error } = await supabase.functions.invoke('kitchen-toggle', { body: { closed } })
+    if (error) throw error
+    return data
+  },
 }
 
 /* --------------------------- Demo (local) --------------------------- */
@@ -261,6 +268,15 @@ const localStore = {
 
   async sendChefList() {
     throw new Error('Emails need Supabase — demo mode stores data only in this browser.')
+  },
+
+  // Demo: flip the flag locally so the UI works; no group announcement.
+  async setKitchenClosed(closed) {
+    const db = readDb()
+    const today = new Date().toISOString().slice(0, 10)
+    db.dayMeta[today] = { lunch_date: today, guest_count: 0, note: '', ...db.dayMeta[today], no_cooking: closed }
+    writeDb(db)
+    return { demo: true, closed }
   },
 }
 

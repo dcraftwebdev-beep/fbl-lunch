@@ -11,6 +11,12 @@ import styles from './EmailAction.module.css'
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/join-lunch`
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// 'YYYY-MM-DD' → 'DD-MM-YYYY' for display
+const fmtDate = (iso) => {
+  const [y, m, d] = (iso || '').split('-')
+  return d ? `${d}-${m}-${y}` : iso
+}
+
 export default function JoinLunch() {
   const params = new URLSearchParams(window.location.search)
   const m = params.get('m')
@@ -59,7 +65,7 @@ export default function JoinLunch() {
             <div className={styles.emoji} aria-hidden="true">🍛</div>
             <h1 className={styles.title}>Lunch today?</h1>
             <p className={styles.msg}>
-              The office kitchen is cooking on <b className={styles.mono}>{d}</b>.
+              The office kitchen is cooking on <b className={styles.mono}>{fmtDate(d)}</b>.
               One click and your plate is on the register.
             </p>
             <button
