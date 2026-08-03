@@ -162,6 +162,31 @@
   margin-top: 2px;
 }
 
+/* ---------- kitchen-closed (no cooking) day ---------- */
+.closedHead {
+  background: var(--flame-soft, #fdece8);
+  border-radius: 6px 6px 0 0;
+}
+
+.closedTag {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.closedFoot {
+  background: var(--flame-soft, #fdece8);
+}
+
+.closedDay {
+  font-size: 15px;
+  line-height: 1;
+}
+
 /* ---------- body ---------- */
 
 .nameCell {
@@ -338,4 +363,24 @@
 
 .zeroDay {
   color: var(--line-strong);
+}
+
+/* ---------- no-cooking day cells: non-clickable ✕ for everyone ---------- */
+/* Placed last so it overrides .todayCell / .cell backgrounds. */
+.closedCell {
+  background: var(--flame-soft, #fdece8);
+}
+
+.markClosed {
+  display: inline-block;
+  width: 34px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: not-allowed;
+  user-select: none;
+  opacity: 0.65;
 }

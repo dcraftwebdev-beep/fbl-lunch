@@ -88,6 +88,13 @@ export async function exportExcel({ from, to, members }) {
   })
   headRow.height = 30
 
+  // Tint the header of any "kitchen closed" day so it stands out.
+  days.forEach((d, di) => {
+    if (metaByDate[d]?.no_cooking) {
+      headRow.getCell(3 + di).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8A3020' } }
+    }
+  })
+
   // Member rows
   roster.forEach((m, ri) => {
     const r = ws.getRow(5 + ri)
@@ -144,7 +151,7 @@ export async function exportExcel({ from, to, members }) {
   }
   addTotalsRow(
     firstTotalRow, 'Plates / day',
-    (d) => entries.filter((e) => e.lunch_date === d).length,
+    (d) => metaByDate[d]?.no_cooking ? 'Closed' : entries.filter((e) => e.lunch_date === d).length,
     entries.length
   )
   addTotalsRow(
@@ -190,23 +197,30 @@ export async function exportExcel({ from, to, members }) {
     const guests = metaByDate[d]?.guest_count || 0
     const weekday = format(parseISO(d), 'EEEE')
     const isWeekend = weekday === 'Saturday' || weekday === 'Sunday'
+    const closed = !!metaByDate[d]?.no_cooking
     const r = ws2.getRow(5 + ri)
-    const vals = [
-      format(parseISO(d), 'dd MMM yyyy'), weekday, dayEntries.length, veg,
-      dayEntries.length - veg, guests, dayEntries.length + guests, metaByDate[d]?.note || '',
-    ]
+    const noteText = closed
+      ? 'Kitchen closed — Kavitha akka not cooking (eat outside)' + (metaByDate[d]?.note ? ' · ' + metaByDate[d].note : '')
+      : (metaByDate[d]?.note || '')
+    const vals = closed
+      ? [format(parseISO(d), 'dd MMM yyyy'), weekday, 'Closed', '—', '—', guests, guests, noteText]
+      : [
+          format(parseISO(d), 'dd MMM yyyy'), weekday, dayEntries.length, veg,
+          dayEntries.length - veg, guests, dayEntries.length + guests, noteText,
+        ]
     const band = ri % 2 === 1
     vals.forEach((v, i) => {
       const c = r.getCell(i + 1)
       c.value = v
-      c.font = { size: 10.5, color: { argb: 'FF1C221D' } }
+      c.font = { size: 10.5, color: { argb: closed ? 'FF8A3020' : 'FF1C221D' } }
       c.alignment = { vertical: 'middle', horizontal: i === 7 ? 'left' : (i < 2 ? 'left' : 'center'), indent: i < 2 || i === 7 ? 1 : 0, wrapText: i === 7 }
-      if (isWeekend) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0EEE6' } }
+      if (closed) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7E4E0' } }
+      else if (isWeekend) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0EEE6' } }
       else if (band) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BAND } }
       c.border = allBorders
     })
-    if (d === today) r.getCell(1).font = { size: 10.5, bold: true, color: { argb: GREEN } }
-    r.getCell(7).font = { size: 10.5, bold: true, color: { argb: VEG } }
+    if (d === today) r.getCell(1).font = { size: 10.5, bold: true, color: { argb: closed ? 'FF8A3020' : GREEN } }
+    if (!closed) r.getCell(7).font = { size: 10.5, bold: true, color: { argb: VEG } }
     r.height = 18
   })
 

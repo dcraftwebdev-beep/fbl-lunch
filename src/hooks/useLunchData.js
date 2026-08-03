@@ -3,12 +3,15 @@ import { format, subDays } from 'date-fns'
 import { store } from '../lib/store'
 
 export const DAYS_SHOWN = 10
+// How far back the dashboard loads so the register pager can page into
+// previous months (not just the last 10 days). One year of history.
+export const HISTORY_DAYS = 365
 
 const iso = (d) => format(d, 'yyyy-MM-dd')
 
 export function useLunchData(notify) {
   const today = iso(new Date())
-  const rangeStart = iso(subDays(new Date(), DAYS_SHOWN - 1))
+  const rangeStart = iso(subDays(new Date(), HISTORY_DAYS))
 
   const [members, setMembers] = useState([])
   const [entries, setEntries] = useState([]) // { member_id, lunch_date } within range
@@ -190,7 +193,7 @@ export function useLunchData(notify) {
   }, [today, notify, refresh])
 
   return {
-    today, days, members, entries, dayMeta, loading, error, settings,
+    today, days, rangeStart, members, entries, dayMeta, loading, error, settings,
     isIn, todayMemberIds,
     toggleEntry, addToday, copyYesterday, setMeta, addMember, updateMember, deleteMember,
     updateSettings, sendChefList, setKitchenClosed,

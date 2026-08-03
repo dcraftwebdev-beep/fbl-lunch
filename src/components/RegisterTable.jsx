@@ -34,7 +34,7 @@ const noLunchLine = (memberId, date) => {
 const WINDOW = 10
 
 export default function RegisterTable({ data }) {
-  const { members, days, today, isIn, toggleEntry, entries, dayMeta } = data
+  const { members, days, today, isIn, toggleEntry, entries, dayMeta, rangeStart } = data
 
   // How many 10-day pages we've stepped back. 0 = the latest window.
   const [pageBack, setPageBack] = useState(0)
@@ -51,6 +51,10 @@ export default function RegisterTable({ data }) {
     windowEnd,
     'dd/MM/yyyy'
   )}`
+
+  // Only page back as far as the loaded history (rangeStart). Once the
+  // window's first day reaches it, disable ◀ so we don't show empty months.
+  const canGoBack = !rangeStart || visibleDays[0] > rangeStart
 
   // Only entries inside the visible window count toward totals here
   const inWindow = (e) => visibleDays.includes(e.lunch_date)
@@ -70,7 +74,7 @@ export default function RegisterTable({ data }) {
         <h2 className={styles.heading}>The register</h2>
         <div className={styles.pager}>
           <span className={styles.hint}>Click any cell to correct a day.</span>
-          <button className={styles.pagerBtn} onClick={() => setPageBack((p) => p + 1)} aria-label="Previous 10 days" title="Previous 10 days" type="button">
+          <button className={styles.pagerBtn} onClick={() => setPageBack((p) => p + 1)} disabled={!canGoBack} aria-label="Previous 10 days" title={canGoBack ? 'Previous 10 days' : 'No older records loaded'} type="button">
   <ChevronLeft size={16} strokeWidth={2.5} aria-hidden="true" />
 </button>
 
@@ -86,13 +90,17 @@ export default function RegisterTable({ data }) {
           <thead>
             <tr>
               <th className={styles.nameHead}>Member</th>
-              {visibleDays.map((d) => (
-                <th key={d} className={d === today ? styles.todayHead : styles.dayHead} scope="col">
-                  <span className={styles.dayName}>{format(parseISO(d), 'EEE')}</span>
-                  <span className={styles.dayNum}>{format(parseISO(d), 'dd/MM')}</span>
-                  {d === today && <span className={styles.todayTag}>today</span>}
-                </th>
-              ))}
+              {visibleDays.map((d) => {
+                const closed = !!dayMeta[d]?.no_cooking
+                return (
+                  <th key={d} className={`${d === today ? styles.todayHead : styles.dayHead} ${closed ? styles.closedHead : ''}`} scope="col">
+                    <span className={styles.dayName}>{format(parseISO(d), 'EEE')}</span>
+                    <span className={styles.dayNum}>{format(parseISO(d), 'dd/MM')}</span>
+                    {d === today && !closed && <span className={styles.todayTag}>today</span>}
+                    {closed && <span className={styles.closedTag} title="No office lunch — kitchen closed, eat outside">no lunch</span>}
+                  </th>
+                )
+              })}
               <th className={styles.totalHead} scope="col">Total</th>
             </tr>
           </thead>
@@ -117,6 +125,16 @@ export default function RegisterTable({ data }) {
                     </span>
                   </th>
                   {visibleDays.map((d) => {
+                    const closed = !!dayMeta[d]?.no_cooking
+                    // Kitchen closed → no office lunch for anyone. Static ✕, not clickable.
+                    if (closed) {
+                      return (
+                        <td key={d} className={`${d === today ? styles.todayCell : styles.cell} ${styles.closedCell}`}
+                          title="No office lunch — kitchen closed, eat outside">
+                          <span className={styles.markClosed} aria-label={`${m.name}, ${format(parseISO(d), 'dd MMM')}: no office lunch`}>✕</span>
+                        </td>
+                      )
+                    }
                     const on = isIn(m.id, d)
                     return (
                       <td key={d} className={d === today ? styles.todayCell : styles.cell}>
@@ -154,15 +172,18 @@ export default function RegisterTable({ data }) {
               <th className={styles.footLabel} scope="row">Plates / day</th>
               {visibleDays.map((d) => {
                 const guests = dayMeta[d]?.guest_count || 0
+                const closed = !!dayMeta[d]?.no_cooking
                 const plates = dayTotal(d) + guests
                 return (
                   <td
                     key={d}
-                    className={d === today ? styles.todayFoot : styles.footCell}
-                    title={plates === 0 ? 'Kitchen had the day off, it seems.' : undefined}
+                    className={`${d === today ? styles.todayFoot : styles.footCell} ${closed ? styles.closedFoot : ''}`}
+                    title={closed ? 'No office lunch — kitchen closed, eat outside' : (plates === 0 ? 'Kitchen had the day off, it seems.' : undefined)}
                   >
-                    {plates === 0 ? <span className={styles.zeroDay}>–</span> : plates}
-                    {guests > 0 && <span className={styles.guestSup}>+{guests}g</span>}
+                    {closed
+                      ? <span className={styles.closedDay}>🙅</span>
+                      : (plates === 0 ? <span className={styles.zeroDay}>–</span> : plates)}
+                    {!closed && guests > 0 && <span className={styles.guestSup}>+{guests}g</span>}
                   </td>
                 )
               })}
