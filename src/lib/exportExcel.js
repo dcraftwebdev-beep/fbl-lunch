@@ -122,7 +122,7 @@ export async function exportExcel({ from, to, members }) {
     })
 
     const totalCell = r.getCell(NCOLS)
-    totalCell.value = days.filter((d) => has.has(`${m.id}|${d}`)).length
+    totalCell.value = days.filter((d) => has.has(`${m.id}|${d}`) && !metaByDate[d]?.no_cooking).length
     totalCell.font = { size: 11, bold: true, color: { argb: 'FF1C221D' } }
     totalCell.alignment = { vertical: 'middle', horizontal: 'center' }
 
@@ -152,7 +152,7 @@ export async function exportExcel({ from, to, members }) {
   addTotalsRow(
     firstTotalRow, 'Plates / day',
     (d) => metaByDate[d]?.no_cooking ? 'Closed' : entries.filter((e) => e.lunch_date === d).length,
-    entries.length
+    entries.filter((e) => !metaByDate[e.lunch_date]?.no_cooking).length
   )
   addTotalsRow(
     firstTotalRow + 1, 'Guest plates',

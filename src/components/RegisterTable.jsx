@@ -56,9 +56,12 @@ export default function RegisterTable({ data }) {
   // window's first day reaches it, disable ◀ so we don't show empty months.
   const canGoBack = !rangeStart || visibleDays[0] > rangeStart
 
-  // Only entries inside the visible window count toward totals here
+  // Only entries inside the visible window count toward totals here —
+  // and NO-COOKING days count as zero plates for everyone (any leftover
+  // entries on a closed day are excluded so the totals match the ✕ cells).
   const inWindow = (e) => visibleDays.includes(e.lunch_date)
-  const windowEntries = entries.filter(inWindow)
+  const notClosed = (e) => !dayMeta[e.lunch_date]?.no_cooking
+  const windowEntries = entries.filter((e) => inWindow(e) && notClosed(e))
 
   const roster = members.filter(
     (m) => m.active || entries.some((e) => e.member_id === m.id)

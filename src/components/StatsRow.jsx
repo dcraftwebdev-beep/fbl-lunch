@@ -16,14 +16,15 @@ export default function StatsRow({ data }) {
     // Keep these scoped to the visible 10-day window — `entries` now holds
     // a year of history, so filter to `days` or the average/counts inflate.
     const winSet = new Set(days)
+    const open = (d) => !dayMeta[d]?.no_cooking // no-cooking days count as zero plates
     const pastDays = days.filter((d) => d < today)
     const pastSet = new Set(pastDays)
-    const pastTotal = entries.filter((e) => pastSet.has(e.lunch_date)).length
+    const pastTotal = entries.filter((e) => pastSet.has(e.lunch_date) && open(e.lunch_date)).length
     const avg = pastDays.length ? (pastTotal / pastDays.length).toFixed(1) : '0'
 
     const counts = {}
     entries.forEach((e) => {
-      if (winSet.has(e.lunch_date)) counts[e.member_id] = (counts[e.member_id] || 0) + 1
+      if (winSet.has(e.lunch_date) && open(e.lunch_date)) counts[e.member_id] = (counts[e.member_id] || 0) + 1
     })
     const topId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
     const regular = topId ? { name: nameById[topId] || '—', count: counts[topId] } : null
