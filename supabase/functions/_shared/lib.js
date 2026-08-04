@@ -285,19 +285,32 @@ export const htmlPage = (title, msg, ok = true) =>
 
 /* ---------------- email shell ---------------- */
 
-export const shell = (title, body) => `
-<div style="font-family:Arial,Helvetica,sans-serif;background:#f6f7f2;padding:24px">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e3e7de;border-radius:12px;overflow:hidden">
-    <div style="background:#17452b;color:#f6f7f2;padding:16px 22px">
-      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a8c5b2">Firebrand Labs</div>
-      <div style="font-size:19px;font-weight:bold">${title}</div>
+// Brand-coloured email shell. `subtitle` is an optional eyebrow tagline
+// under the title.
+export const shell = (title, body, subtitle = '') => `
+<div style="margin:0;padding:28px 12px;background:#eef1ea;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e2e7dc;box-shadow:0 12px 32px -14px rgba(23,69,43,0.28);">
+    <div style="background:#1f5c38;background-image:linear-gradient(135deg,#22683e,#153a27);padding:26px 30px;">
+      <div style="font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#a8c5b2;font-weight:600;">🍛&nbsp;&nbsp;Firebrand Labs · Lunch</div>
+      <div style="margin-top:13px;font-size:23px;font-weight:700;color:#ffffff;line-height:1.22;">${title}</div>
+      ${subtitle ? `<div style="margin-top:6px;font-size:13px;color:#bcd4c4;">${subtitle}</div>` : ''}
     </div>
-    <div style="padding:22px;color:#1c221d;font-size:15px;line-height:1.55">${body}</div>
-    <div style="padding:12px 22px;border-top:1px solid #e3e7de;color:#5a645c;font-size:12px">
-      firebrand labs · internal lunch register
+    <div style="padding:28px 30px;color:#1c221d;font-size:15px;line-height:1.65;">${body}</div>
+    <div style="padding:16px 30px;border-top:1px solid #eef1ea;background:#fafbf8;color:#8a9384;font-size:12px;letter-spacing:0.02em;">
+      Firebrand Labs · internal lunch register
     </div>
   </div>
 </div>`
+
+// Email-safe CTA button. kind: 'primary' (green) | 'danger' (cancel) | 'outline'.
+export const emailButton = (href, label, kind = 'primary') => {
+  const skin = {
+    primary: 'background:#1f5c38;color:#ffffff;border:1.5px solid #1f5c38;',
+    danger: 'background:#c03b2b;color:#ffffff;border:1.5px solid #c03b2b;',
+    outline: 'background:#ffffff;color:#1f5c38;border:1.5px solid #1f5c38;',
+  }[kind] || 'background:#1f5c38;color:#ffffff;border:1.5px solid #1f5c38;'
+  return `<a href="${href}" style="display:inline-block;${skin}text-decoration:none;padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;line-height:1;">${label}</a>`
+}
 
 /* ---------------- rotating daily messages ---------------- */
 

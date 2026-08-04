@@ -43,6 +43,21 @@ export function useLunchData(notify) {
 
   useEffect(() => { refresh() }, [refresh])
 
+  // Reflect changes made elsewhere — an email "Cancel my lunch", a
+  // Basecamp !lunch in/out, or another admin — without a manual reload.
+  // Refetch when the tab regains focus, and lightly poll while visible.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+    const id = setInterval(onVisible, 60000)
+    return () => {
+      window.removeEventListener('focus', onVisible)
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(id)
+    }
+  }, [refresh])
+
   /* ------------ derived ------------ */
 
   const days = useMemo(
