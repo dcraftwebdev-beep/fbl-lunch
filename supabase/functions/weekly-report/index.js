@@ -44,14 +44,15 @@ Deno.serve(async (req) => {
     // Sheet 1: Register
     const header = ['Member', 'Pref', ...dayCols, 'Total']
     const rows = roster.map((m) => {
-      const marks = days.map((d) => (closed(d) ? 'Closed' : (has.has(`${m.id}|${d}`) ? 'Yes' : '')))
+      const marks = days.map((d) => (closed(d) ? 'Closed' : (has.has(`${m.id}|${d}`) ? 'Yes' : '-')))
       const total = days.filter((d) => !closed(d) && has.has(`${m.id}|${d}`)).length
       return [m.name, m.food_pref === 'veg' ? 'Veg' : 'Non-veg', ...marks, total]
     })
     const platesRow = ['Plates / day', '', ...days.map((d) =>
       closed(d) ? 'Closed' : (entries ?? []).filter((e) => e.lunch_date === d).length
     ), (entries ?? []).filter((e) => !closed(e.lunch_date)).length]
-    const ws1 = XLSX.utils.aoa_to_sheet([header, ...rows, [], platesRow])
+    const legend = ['Key:  Yes = had lunch     -  = did not     Closed = kitchen closed']
+    const ws1 = XLSX.utils.aoa_to_sheet([legend, [], header, ...rows, [], platesRow])
     ws1['!cols'] = [{ wch: 22 }, { wch: 10 }, ...dayCols.map(() => ({ wch: 12 })), { wch: 8 }]
 
     // Sheet 2: Daily summary

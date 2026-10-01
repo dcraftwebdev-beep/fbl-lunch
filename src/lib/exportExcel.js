@@ -70,8 +70,8 @@ export async function exportExcel({ from, to, members }) {
 
   ws.mergeCells(2, 1, 2, NCOLS)
   const sub = ws.getCell(2, 1)
-  sub.value = `Register  ·  ${rangeLabel}`
-  sub.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF5A645C' } }
+  sub.value = `${rangeLabel}      Key:   Yes = had lunch      -  = did not      Closed = kitchen closed`
+  sub.font = { name: 'Calibri', size: 10, color: { argb: 'FF5A645C' } }
   sub.alignment = { horizontal: 'left', indent: 1 }
   ws.getRow(3).height = 4 // slim spacer
 
@@ -112,13 +112,23 @@ export async function exportExcel({ from, to, members }) {
 
     days.forEach((d, di) => {
       const cell = r.getCell(3 + di)
-      const on = has.has(`${m.id}|${d}`)
-      cell.value = on ? '●' : ''
+      const dayClosed = !!metaByDate[d]?.no_cooking
+      const on = has.has(`${m.id}|${d}`) && !dayClosed
       cell.alignment = { vertical: 'middle', horizontal: 'center' }
-      cell.font = { size: 11, color: { argb: VEG } }
-      if (on) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN_SOFT } }
-      else if (d === today) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } }
-      else if (band) cell.fill = band
+      if (dayClosed) {
+        cell.value = 'Closed'
+        cell.font = { size: 9, color: { argb: 'FF8A3020' } }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7E4E0' } }
+      } else if (on) {
+        cell.value = 'Yes'
+        cell.font = { size: 10.5, bold: true, color: { argb: VEG } }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN_SOFT } }
+      } else {
+        cell.value = '-'
+        cell.font = { size: 11, color: { argb: 'FFB8B0A2' } }
+        if (d === today) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } }
+        else if (band) cell.fill = band
+      }
     })
 
     const totalCell = r.getCell(NCOLS)
