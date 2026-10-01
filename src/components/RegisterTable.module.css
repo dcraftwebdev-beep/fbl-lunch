@@ -384,3 +384,22 @@
   user-select: none;
   opacity: 0.65;
 }
+
+/* why-closed note below the table */
+.closedNotes {
+  list-style: none;
+  margin: 14px 2px 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--flame-soft, #fdece8);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.closedNoteDot {
+  margin-right: 7px;
+}

@@ -10,6 +10,7 @@ import StatsRow from './components/StatsRow'
 import RegisterTable from './components/RegisterTable'
 import ExportPanel from './components/ExportPanel'
 import ChefCard from './components/ChefCard'
+import AdminCard from './components/AdminCard'
 import MembersPanel from './components/MembersPanel'
 import Toast from './components/Toast'
 import TasksView from './modules/tasks/TasksView'
@@ -37,6 +38,7 @@ function LunchRegisterWrapper({ notify, data }) {
           <div className={styles.bottomGrid}>
             <div className={styles.leftStack}>
               <ChefCard data={data} />
+              <AdminCard data={data} />
               <ExportPanel data={data} notify={notify} />
             </div>
             <MembersPanel data={data} />

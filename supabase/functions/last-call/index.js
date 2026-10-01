@@ -1,23 +1,21 @@
-// last-call — repurposed to the 11:15 AM IST FINALISE post (Mon–Fri).
-// At 11:15 the order window closes. This posts TODAY's final lunch list
-// into the Basecamp Campfire so everyone can see the count that's going
-// to the kitchen. The chef's final list is emailed separately by the
-// send-chef-list cron at the same time.
+// last-call — the 5:00 PM CLOSE / finalise post (Sun to Thu). Ordering for
+// tomorrow closes now. This posts tomorrow's final lunch list into the
+// Basecamp Campfire so everyone can see the count going to the kitchen.
+// The chef's list is emailed separately by send-chef-list at the same time.
 // Deduped once per lunch date via email_log (kind: bc_finalise).
 //
-// DEPLOY:   supabase functions deploy last-call
-// SCHEDULE: cron `45 5 * * 1-5`  (05:45 UTC = 11:15 IST, Mon–Fri)
+// SCHEDULE: cron `30 11 * * 0-4`  (11:30 UTC = 5:00 PM IST, Sun to Thu)
 import {
   admin,
   cors,
   json,
-  todayIST,
   fmtDate,
   claimSend,
   postToBasecamp,
   lunchRoster,
   rosterNamesHtml,
   isNoCookingDay,
+  nextLunchDateIST,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -25,7 +23,7 @@ Deno.serve(async (req) => {
 
   try {
     const db = admin()
-    const date = todayIST()
+    const date = nextLunchDateIST() // tomorrow
 
     if (await isNoCookingDay(db, date)) {
       return json({ ok: true, date, skipped: 'no_cooking' })
@@ -36,9 +34,9 @@ Deno.serve(async (req) => {
 
     const roster = await lunchRoster(db, date)
     await postToBasecamp(
-      `🔒 <b>Today's lunch list (${fmtDate(date)}) — final</b><br>` +
+      `🔒 <b>Tomorrow's lunch list (${fmtDate(date)}) is final.</b><br>` +
       `${rosterNamesHtml(roster)}<br><br>` +
-      `<b>${roster.length}</b> plates going to the kitchen. Window reopens tomorrow morning. 🍛`
+      `<b>${roster.length}</b> plates going to the kitchen. Ordering reopens at 4:00 PM tomorrow. 🍛`
     )
 
     return json({ ok: true, date, plates: roster.length })

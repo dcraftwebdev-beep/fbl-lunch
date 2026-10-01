@@ -1,21 +1,20 @@
-// midday-confirm — repurposed to the 11:00 AM IST REMINDER post (Mon–Fri).
-// 15 minutes before the window closes it posts today's current list into
-// the Basecamp Campfire: "last chance, closes 11:15, type !lunch in".
-// Deduped once per lunch date via email_log (kind: bc_reminder).
+// midday-confirm — the 4:30 PM LAST CALL post (Sun to Thu). 30 minutes
+// before ordering closes it posts tomorrow's current list into the
+// Basecamp Campfire: "last call, closes 5:00 PM, type !lunch in".
+// Deduped once per lunch date via email_log (kind: bc_lastcall).
 //
-// DEPLOY:   supabase functions deploy midday-confirm
-// SCHEDULE: cron `30 5 * * 1-5`  (05:30 UTC = 11:00 IST, Mon–Fri)
+// SCHEDULE: cron `0 11 * * 0-4`  (11:00 UTC = 4:30 PM IST, Sun to Thu)
 import {
   admin,
   cors,
   json,
-  todayIST,
   fmtDate,
   claimSend,
   postToBasecamp,
   lunchRoster,
   rosterNamesHtml,
   isNoCookingDay,
+  nextLunchDateIST,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -23,18 +22,18 @@ Deno.serve(async (req) => {
 
   try {
     const db = admin()
-    const date = todayIST()
+    const date = nextLunchDateIST() // tomorrow
 
     if (await isNoCookingDay(db, date)) {
       return json({ ok: true, date, skipped: 'no_cooking' })
     }
-    if (!(await claimSend(db, 'bc_reminder', date))) {
+    if (!(await claimSend(db, 'bc_lastcall', date))) {
       return json({ ok: true, date, skipped: 'already posted' })
     }
 
     const roster = await lunchRoster(db, date)
     await postToBasecamp(
-      `⏰ <b>15 minutes left!</b> Lunch closes at <b>11:15 AM</b> today (${fmtDate(date)}).<br>` +
+      `⏰ <b>Last call!</b> Lunch ordering for tomorrow (${fmtDate(date)}) closes at <b>5:00 PM</b>.<br>` +
       `${rosterNamesHtml(roster)}<br><br>` +
       `Not on the list yet? Type <b>!lunch in</b> now. Current count: <b>${roster.length}</b> plates. 🍛`
     )

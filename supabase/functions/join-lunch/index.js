@@ -17,12 +17,13 @@ import {
   json,
   sendEmail,
   shell,
-  todayIST,
   fmtDate,
   orderWindowOpen,
+  orderTargetDate,
   htmlPage,
   verifyJoin,
   chefListSent,
+  chefRecipients,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -50,17 +51,17 @@ Deno.serve(async (req) => {
 
   try {
     if (!m || !d || !s) {
-      return reply(false, 'Broken link', "Open the button from today's email again.")
+      return reply(false, 'Broken link', 'Open the button from the latest email again.')
     }
     if (!(await verifyJoin(m, d, s))) {
       return reply(false, 'Invalid link', 'Use the button from the latest email.')
     }
-    // The link is only valid for TODAY's lunch (same-day ordering).
-    if (d !== todayIST()) {
-      return reply(false, 'Link expired', 'Old link — it was only good for its own lunch day.')
+    // The link is only valid for the day currently being ordered (tomorrow).
+    if (d !== orderTargetDate()) {
+      return reply(false, 'Link expired', 'Old link, it was only good for its own lunch day.')
     }
     if (!orderWindowOpen()) {
-      return reply(false, 'Ordering closed', 'The window closes at 11:15 AM. Come back tomorrow morning.')
+      return reply(false, 'Ordering closed', 'Ordering runs 4:00 to 5:00 PM the evening before. Please try in that window.')
     }
 
     const db = admin()
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
       return reply(
         true,
         `Already on the list, ${member.name}`,
-        `Your plate for today (${fmtDate(d)}) is already marked. 🍛`,
+        `Your plate for ${fmtDate(d)} is already marked. 🍛`,
         { status: 'already', name: member.name }
       )
     }
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       .insert({ member_id: member.id, lunch_date: d })
     if (insErr) throw insErr
 
-    // If the 11:15 chef list already went out (late click), send a +1.
+    // If the chef list already went out (late click), send a +1 to chef + admin.
     const { data: settings } = await db.from('app_settings').select('chef_email').eq('id', 1).single()
     if (settings?.chef_email && (await chefListSent(db, d))) {
       const { count } = await db
@@ -105,17 +106,17 @@ Deno.serve(async (req) => {
         .select('*', { count: 'exact', head: true })
         .eq('lunch_date', d)
       await sendEmail(
-        settings.chef_email,
-        `Lunch +1: ${member.name} — now ${count} plates`,
-        shell('Lunch update: +1', `<p><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) joined via the email button after the 11:15 list.</p>
-          <p style="font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
+        chefRecipients(settings.chef_email),
+        `Lunch +1: ${member.name}, now ${count} plates (${fmtDate(d)})`,
+        shell('Lunch update: +1', `<p style="margin:0 0 10px;"><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) joined for ${fmtDate(d)} via the email button after the list went out.</p>
+          <p style="margin:0;font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
       )
     }
 
     return reply(
       true,
       `You're in, ${member.name} 🍛`,
-      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for today (${fmtDate(d)}).`,
+      `${member.food_pref === 'veg' ? 'Veg' : 'Non-veg'} plate booked for ${fmtDate(d)}.`,
       { status: 'added', name: member.name }
     )
   } catch (err) {

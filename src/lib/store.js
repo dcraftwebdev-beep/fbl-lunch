@@ -119,16 +119,16 @@ const supabaseStore = {
     return data
   },
 
-  // Send (or resend, updated) today's list to the chef.
-  async sendChefList() {
-    const { data, error } = await supabase.functions.invoke('send-chef-list', { body: { force: true } })
+  // Send today's list on demand. recipient: 'chef' | 'admin' | 'both'.
+  async sendChefList(recipient = 'both') {
+    const { data, error } = await supabase.functions.invoke('send-chef-list', { body: { target: 'today', recipient } })
     if (error) throw error
     return data
   },
 
-  // Toggle "No cooking today" — sets the flag AND announces to the group.
-  async setKitchenClosed(closed) {
-    const { data, error } = await supabase.functions.invoke('kitchen-toggle', { body: { closed } })
+  // Toggle "No cooking" for a date — sets the flag + reason AND announces.
+  async setKitchenClosed(closed, reason = '', date) {
+    const { data, error } = await supabase.functions.invoke('kitchen-toggle', { body: { closed, reason, date } })
     if (error) throw error
     return data
   },
@@ -271,12 +271,12 @@ const localStore = {
   },
 
   // Demo: flip the flag locally so the UI works; no group announcement.
-  async setKitchenClosed(closed) {
+  async setKitchenClosed(closed, reason = '', date) {
     const db = readDb()
-    const today = new Date().toISOString().slice(0, 10)
-    db.dayMeta[today] = { lunch_date: today, guest_count: 0, note: '', ...db.dayMeta[today], no_cooking: closed }
+    const d = date || new Date().toISOString().slice(0, 10)
+    db.dayMeta[d] = { lunch_date: d, guest_count: 0, note: '', ...db.dayMeta[d], no_cooking: closed, no_cooking_reason: closed ? reason : null }
     writeDb(db)
-    return { demo: true, closed }
+    return { demo: true, closed, date: d }
   },
 }
 

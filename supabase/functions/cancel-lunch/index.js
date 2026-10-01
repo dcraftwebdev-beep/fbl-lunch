@@ -17,7 +17,7 @@
 // After deploying with the flag, confirm in Dashboard → Edge Functions
 // → cancel-lunch → Details that "Verify JWT" shows OFF.
 // ─────────────────────────────────────────────────────────────────────
-import { admin, cors, json, sendEmail, shell, todayIST, orderWindowOpen, htmlPage, chefListSent } from '../_shared/lib.js'
+import { admin, cors, json, sendEmail, shell, fmtDate, orderWindowOpen, orderTargetDate, htmlPage, chefListSent, chefRecipients } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   // Email scanners prefetch links with HEAD — answer empty, cancel
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     }
 
     const db = admin()
-    const date = todayIST()
+    const date = orderTargetDate() // the day currently being ordered (tomorrow)
 
     const { data: entry } = await db
       .from('lunch_entries')
@@ -56,15 +56,15 @@ Deno.serve(async (req) => {
     if (!entry) {
       return reply(true, 'Already cancelled', 'Nothing more to do.', { status: 'already' })
     }
-    // Cancelling is allowed while today's window is open (till 11:15 AM).
+    // Cancelling is allowed while the ordering window is open (4 to 5 PM).
     if (!(entry.lunch_date === date && orderWindowOpen())) {
-      return reply(false, 'Too late to cancel', 'Window closed (shuts 11:15 AM) — plate is locked and will be cooked. 🍛')
+      return reply(false, 'Too late to cancel', 'Ordering has closed (4:00 to 5:00 PM the evening before). Your plate is locked and will be cooked. 🍛')
     }
 
     const { data: member } = await db.from('members').select('name, food_pref').eq('id', entry.member_id).single()
     await db.from('lunch_entries').delete().eq('id', entry.id)
 
-    // Tell the chef, but only if the 11:15 list already went out
+    // Tell the chef + admin, but only if the list already went out
     const { data: settings } = await db.from('app_settings').select('chef_email').eq('id', 1).single()
     if (settings?.chef_email && (await chefListSent(db, date))) {
       const { count } = await db
@@ -72,17 +72,17 @@ Deno.serve(async (req) => {
         .select('*', { count: 'exact', head: true })
         .eq('lunch_date', date)
       await sendEmail(
-        settings.chef_email,
-        `Lunch −1: ${member?.name ?? 'A member'} — now ${count} plates`,
-        shell('Lunch update: −1', `<p><b>${member?.name ?? 'A member'}</b> cancelled via email link.</p>
-          <p style="font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
+        chefRecipients(settings.chef_email),
+        `Lunch −1: ${member?.name ?? 'A member'}, now ${count} plates (${fmtDate(date)})`,
+        shell('Lunch update: −1', `<p style="margin:0 0 10px;"><b>${member?.name ?? 'A member'}</b> cancelled their plate for ${fmtDate(date)} via the email link.</p>
+          <p style="margin:0;font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
       )
     }
 
     return reply(
       true,
       `Lunch cancelled, ${member?.name ?? 'done'}`,
-      'Plate is off the list. Rebook via the email button or !lunch in — open till 11:15 AM.',
+      'Your plate is off the list. Rebook with the email button or !lunch in during the 4:00 to 5:00 PM window.',
       { status: 'cancelled', name: member?.name ?? null }
     )
   } catch (err) {

@@ -25,9 +25,17 @@ entrypoint = "./functions/morning-invite/index.js"
 [functions.midday-confirm]
 entrypoint = "./functions/midday-confirm/index.js"
 
-# Dashboard "No cooking today" switch → announces + turns away orders.
+# Dashboard "No cooking" switch, announces + turns away orders.
 [functions.kitchen-toggle]
 entrypoint = "./functions/kitchen-toggle/index.js"
+
+# Daily 9 AM greeting on company holidays.
+[functions.holiday-wish]
+entrypoint = "./functions/holiday-wish/index.js"
+
+# Friday 6 PM weekly Excel report emailed to the admin.
+[functions.weekly-report]
+entrypoint = "./functions/weekly-report/index.js"
 
 [functions.join-lunch]
 entrypoint = "./functions/join-lunch/index.js"

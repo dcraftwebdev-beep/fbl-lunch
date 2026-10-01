@@ -12,6 +12,13 @@ const iso = (d) => format(d, 'yyyy-MM-dd')
 export function useLunchData(notify) {
   const today = iso(new Date())
   const rangeStart = iso(subDays(new Date(), HISTORY_DAYS))
+  // The day currently being ordered (evening-before flow): next working day.
+  const nextLunchDay = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1)
+    return iso(d)
+  })()
 
   const [members, setMembers] = useState([])
   const [entries, setEntries] = useState([]) // { member_id, lunch_date } within range
@@ -86,16 +93,16 @@ export function useLunchData(notify) {
       if (on) await store.removeEntry(memberId, date)
       else await store.addEntry(memberId, date)
       if (name) notify(on ? `${name} removed` : `${name} added`)
-      // Emails (confirmation + chef +1/-1) only apply to changes to TODAY
-      if (date === today) {
+      // Emails (confirmation + chef +1/-1) apply to the day being ordered.
+      if (date === today || date === nextLunchDay) {
         store.notifyChange(memberId, on ? 'removed' : 'added').catch((e) => console.warn('notify-change:', e))
       }
     } catch (err) {
       console.error(err)
-      notify('Save failed — change rolled back', 'error')
+      notify('Save failed, change rolled back', 'error')
       refresh()
     }
-  }, [entrySet, notify, refresh])
+  }, [entrySet, notify, refresh, today, nextLunchDay])
 
   const addToday = useCallback((memberId, name) => {
     if (!entrySet.has(`${memberId}|${today}`)) toggleEntry(memberId, today, name)
@@ -181,34 +188,37 @@ export function useLunchData(notify) {
     }
   }, [notify, refresh])
 
-  const sendChefList = useCallback(async () => {
+  const sendChefList = useCallback(async (recipient = 'both') => {
     try {
-      const res = await store.sendChefList()
-      notify(res?.sent ? `List sent to the chef — ${res.total} plates` : 'List already sent today')
+      const res = await store.sendChefList(recipient)
+      const who = recipient === 'admin' ? 'Mani' : recipient === 'chef' ? 'the chef' : 'chef and Mani'
+      notify(res?.skipped ? 'Kitchen is closed that day, list not sent' : `Today's list sent to ${who} (${res?.plates ?? 0} plates)`)
     } catch (err) {
       console.error(err)
-      notify(err.message || 'Could not send — check chef email and Resend setup', 'error')
+      notify(err.message || 'Could not send, check email and Resend setup', 'error')
     }
   }, [notify])
 
-  // "No cooking today" toggle — optimistic flag + server announce to the group.
-  const setKitchenClosed = useCallback(async (closed) => {
+  // "No cooking" toggle for the next lunch day. Optimistic flag + reason,
+  // server sets it and announces to the group.
+  const setKitchenClosed = useCallback(async (closed, reason = '') => {
+    const d = nextLunchDay
     setDayMeta((prev) => ({
       ...prev,
-      [today]: { lunch_date: today, guest_count: 0, note: '', ...prev[today], no_cooking: closed },
+      [d]: { lunch_date: d, guest_count: 0, note: '', ...prev[d], no_cooking: closed, no_cooking_reason: closed ? reason : null },
     }))
     try {
-      await store.setKitchenClosed(closed)
-      notify(closed ? 'Kitchen closed — team told to eat outside 🙏' : 'Kitchen reopened for today 🍛')
+      await store.setKitchenClosed(closed, reason, d)
+      notify(closed ? 'Kitchen closed, team told to eat outside 🙏' : 'Kitchen reopened 🍛')
     } catch (err) {
       console.error(err)
-      notify('Could not update kitchen status — try again', 'error')
+      notify('Could not update kitchen status, try again', 'error')
       refresh()
     }
-  }, [today, notify, refresh])
+  }, [nextLunchDay, notify, refresh])
 
   return {
-    today, days, rangeStart, members, entries, dayMeta, loading, error, settings,
+    today, days, rangeStart, nextLunchDay, members, entries, dayMeta, loading, error, settings,
     isIn, todayMemberIds,
     toggleEntry, addToday, copyYesterday, setMeta, addMember, updateMember, deleteMember,
     updateSettings, sendChefList, setKitchenClosed,

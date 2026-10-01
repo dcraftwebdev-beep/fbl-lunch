@@ -95,12 +95,13 @@ export default function RegisterTable({ data }) {
               <th className={styles.nameHead}>Member</th>
               {visibleDays.map((d) => {
                 const closed = !!dayMeta[d]?.no_cooking
+                const reason = dayMeta[d]?.no_cooking_reason
                 return (
                   <th key={d} className={`${d === today ? styles.todayHead : styles.dayHead} ${closed ? styles.closedHead : ''}`} scope="col">
                     <span className={styles.dayName}>{format(parseISO(d), 'EEE')}</span>
                     <span className={styles.dayNum}>{format(parseISO(d), 'dd/MM')}</span>
                     {d === today && !closed && <span className={styles.todayTag}>today</span>}
-                    {closed && <span className={styles.closedTag} title="No office lunch — kitchen closed, eat outside">no lunch</span>}
+                    {closed && <span className={styles.closedTag} title={reason ? `No lunch: ${reason}` : 'No office lunch, kitchen closed'}>no lunch</span>}
                   </th>
                 )
               })}
@@ -181,7 +182,7 @@ export default function RegisterTable({ data }) {
                   <td
                     key={d}
                     className={`${d === today ? styles.todayFoot : styles.footCell} ${closed ? styles.closedFoot : ''}`}
-                    title={closed ? 'No office lunch — kitchen closed, eat outside' : (plates === 0 ? 'Kitchen had the day off, it seems.' : undefined)}
+                    title={closed ? (dayMeta[d]?.no_cooking_reason ? `No lunch: ${dayMeta[d].no_cooking_reason}` : 'No office lunch, kitchen closed') : (plates === 0 ? 'Kitchen had the day off, it seems.' : undefined)}
                   >
                     {closed
                       ? <span className={styles.closedDay}>🙅</span>
@@ -195,6 +196,18 @@ export default function RegisterTable({ data }) {
           </tfoot>
         </table>
       </div>
+
+      {visibleDays.some((d) => dayMeta[d]?.no_cooking) && (
+        <ul className={styles.closedNotes} aria-label="Closed days">
+          {visibleDays.filter((d) => dayMeta[d]?.no_cooking).map((d) => (
+            <li key={d}>
+              <span className={styles.closedNoteDot} aria-hidden="true">🙅</span>
+              <b>{format(parseISO(d), 'dd/MM/yyyy')}</b>
+              {dayMeta[d]?.no_cooking_reason ? `: ${dayMeta[d].no_cooking_reason}` : ': kitchen closed, eat outside'}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }

@@ -1,9 +1,9 @@
 // notify-change — called by the dashboard when someone is added to or
-// removed from TODAY's lunch.
+// removed from the lunch being ordered (the next working day).
 //   body: { member_id, action: 'added' | 'removed' }
 // added   → member gets a confirmation mail with a "Cancel my lunch" link
-// both    → if the chef's 11:00 list already went out, the chef gets a +1 / −1 update
-import { admin, cors, json, sendEmail, shell, emailButton, todayIST, fmtDate, claimSend, chefListSent } from '../_shared/lib.js'
+// both    → if the chef list already went out, chef + admin get a +1 / −1 update
+import { admin, cors, json, sendEmail, shell, emailButton, CHAT_LINK, orderTargetDate, fmtDate, claimSend, chefListSent, chefRecipients } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     }
 
     const db = admin()
-    const date = todayIST()
+    const date = orderTargetDate() // the day being ordered (tomorrow)
 
     const [{ data: member }, { data: settings }] = await Promise.all([
       db.from('members').select('*').eq('id', member_id).single(),
@@ -39,15 +39,16 @@ Deno.serve(async (req) => {
         if (entry) {
           const cancelUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/cancel-lunch?token=${entry.cancel_token}`
           const html = shell(
-            'You’re in for lunch today 🍛',
+            'You’re in for lunch tomorrow 🍛',
             `<p style="margin:0 0 16px;">Hi ${member.name}, your
-               <b>${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate is booked and headed to the kitchen.</p>
-             <p style="margin:0 0 22px;color:#5a645c;font-size:14px;">Changed your mind? Take yourself off today’s list in one click:</p>
-             <p style="margin:0 0 20px;">${emailButton(cancelUrl, 'Cancel my lunch', 'danger')}</p>
-             <p style="margin:0;color:#8a9384;font-size:13px;">Cancel works until <b>11:15 AM</b>. Do nothing and your plate gets cooked.</p>`,
+               <b>${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}</b> plate is booked for tomorrow.</p>
+             <p style="margin:0 0 18px;color:#6b7266;font-size:14px;">Changed your mind? Take yourself off the list in one click:</p>
+             <p style="margin:0 0 12px;">${emailButton(cancelUrl, 'Cancel my lunch', 'danger')}</p>
+             <p style="margin:0 0 20px;">${emailButton(CHAT_LINK, 'Message the lunch group', 'outline')}</p>
+             <p style="margin:0;color:#9aa295;font-size:13px;">Ordering closes at <b>5:00 PM</b>. Do nothing and your plate gets cooked.</p>`,
             `Plate confirmed for ${fmtDate(date)}`
           )
-          await sendEmail(member.email, `You're in for lunch (${fmtDate(date)})`, html)
+          await sendEmail(member.email, `You're in for lunch tomorrow (${fmtDate(date)})`, html)
           results.member_mail = true
         }
       }
@@ -63,9 +64,10 @@ Deno.serve(async (req) => {
       const sign = action === 'added' ? '+1' : '−1'
       const html = shell(
         `Lunch update: ${sign}`,
-        `<p><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) ${action === 'added' ? 'joined' : 'cancelled'}. New count: <b>${count ?? '?'} plates</b>.</p>`
+        `<p style="margin:0;"><b>${member.name}</b> (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}) ${action === 'added' ? 'joined' : 'cancelled'} for ${fmtDate(date)}. New count: <b>${count ?? '?'} plates</b>.</p>`,
+        `Count now ${count ?? '?'} for ${fmtDate(date)}`
       )
-      await sendEmail(settings.chef_email, `Lunch ${sign}: ${member.name} — now ${count} plates`, html)
+      await sendEmail(chefRecipients(settings.chef_email), `Lunch ${sign}: ${member.name}, now ${count} plates (${fmtDate(date)})`, html)
       results.chef_update = true
     }
 

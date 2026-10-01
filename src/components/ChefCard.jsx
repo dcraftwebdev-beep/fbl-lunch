@@ -29,7 +29,7 @@ export default function ChefCard({ data }) {
 
   const send = async () => {
     setSending(true)
-    await sendChefList()
+    await sendChefList('chef')
     setSending(false)
   }
 

@@ -27,10 +27,10 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 /* ---------------- the bot's personality ---------------- */
 
 const WINDOW_CLOSED_LINES = [
-  "Window's shut. Orders close <b>11:15 AM</b>. ⏰",
-  "Not order time. Open <b>till 11:15 AM</b>, Mon–Fri. 😴",
-  "Register naps after <b>11:15 AM</b>. Catch it tomorrow morning. 🍛",
-  "Closed. Type <b>!lunch in</b> before <b>11:15 AM</b> next time. ⏰",
+  "Window's shut. Ordering opens <b>4:00 to 5:00 PM</b> (eve before). ⏰",
+  "Not order time. Open <b>4:00 to 5:00 PM</b>, Sun to Thu. 😴",
+  "Register naps outside <b>4:00 to 5:00 PM</b>. Catch it this evening. 🍛",
+  "Closed. Type <b>!lunch in</b> between <b>4 and 5 PM</b> next time. ⏰",
 ]
 
 const NO_CANCEL_SPEECH = [
@@ -72,8 +72,8 @@ const MENU_LINES = [
 ]
 
 const HELLO_LINES = [
-  "Hello! <b>!lunch in</b> (before 11:15 AM) books today's plate. <b>!lunch</b> = count.",
-  "Vanakkam 🙏 in / out / count. Open till 11:15 AM, Mon–Fri.",
+  "Hello! <b>!lunch in</b> (4 to 5 PM, eve before) books tomorrow's plate. <b>!lunch</b> = count.",
+  "Vanakkam 🙏 in / out / count. Open <b>4:00 to 5:00 PM</b>, Sun to Thu.",
 ]
 
 const CONFUSED_LINES = [
@@ -129,22 +129,22 @@ Deno.serve(async (req) => {
       return say(pick(HELLO_LINES))
     }
     if (/^help$/.test(cmd)) {
-      return say('<b>in</b> = add me today · <b>out</b> = cancel · <b>!lunch</b> = count. Open <b>till 11:15 AM</b>, Mon–Fri.')
+      return say('<b>in</b> = book tomorrow · <b>out</b> = cancel · <b>!lunch</b> = count. Open <b>4:00 to 5:00 PM</b>, Sun to Thu.')
     }
 
     const db = admin()
     const date = todayIST()
     const weekend = isWeekendIST()
     const windowOpen = orderWindowOpen()
-    // Everything is same-day now: the window only ever orders for TODAY.
+    // We order for the next working day (tomorrow), the evening before.
     const nextDate = orderTargetDate()
-    const nextWord = `today (${fmtDate(nextDate)})`
+    const nextWord = `tomorrow (${fmtDate(nextDate)})`
 
-    // Kitchen closed today? Turn away all in/out/status with a friendly note.
+    // Kitchen closed for that day? Turn away all in/out/status with a note.
     if (await isNoCookingDay(db, nextDate)) {
       return say(
-        `🙅 <b>No office food today (${fmtDate(nextDate)}).</b> ` +
-        `Kavitha akka isn't cooking — please eat outside today. 🙏`
+        `🙅 <b>No office food on ${fmtDate(nextDate)}.</b> ` +
+        `The kitchen is closed that day, please plan to eat outside. 🙏`
       )
     }
 
@@ -228,15 +228,15 @@ Deno.serve(async (req) => {
 
     /* ---------- bare !lunch → status ---------- */
     if (cmd === '' || /^(status|count|list|today|tomorrow)$/.test(cmd)) {
-      const { count: todayCount } = await db
+      const { count: nextCount } = await db
         .from('lunch_entries')
         .select('*', { count: 'exact', head: true })
-        .eq('lunch_date', date)
+        .eq('lunch_date', nextDate)
 
       return say(
-        (weekend ? `Weekend — no lunch. 🌴 ` : `Today (${fmtDate(date)}): <b>${todayCount}</b> plates. `) +
+        `Tomorrow (${fmtDate(nextDate)}): <b>${nextCount}</b> plates. ` +
         `You're <b>${existing ? 'in' : 'not in'}</b>, ${member.name}. ` +
-        (windowOpen ? `Window <b>OPEN</b> till 11:15 AM.` : `Closed. Opens ~10 AM, Mon–Fri.`)
+        (windowOpen ? `Window <b>OPEN</b> till 5:00 PM.` : `Closed. Opens <b>4:00 PM</b>, Sun to Thu.`)
       )
     }
 

@@ -1,7 +1,8 @@
-// send-chef-list — emails the chef the plate list for a lunch day.
+// send-chef-list — emails the plate list for a lunch day to the chef AND
+// to the admin (Mani).
 //   body: { target: 'today' | 'next' }   (default 'today')
-//     today → today's final list (11:15 AM finalise + dashboard button)
-//     next  → next working day's preview list (on-demand only)
+//     next  → tomorrow's final list (5:00 PM close + cron)
+//     today → today's list (dashboard "send now" button)
 // Includes count, veg / non-veg split, names, guest plates and note.
 // Records email_log kind 'chef_list' for that date so later +1 / −1
 // updates (notify-change / join / cancel) know the list already went out.
@@ -19,6 +20,8 @@ import {
   claimSend,
   lunchRoster,
   isNoCookingDay,
+  chefRecipients,
+  ADMIN_EMAIL,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -27,6 +30,8 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}))
     const target = body.target === 'next' ? 'next' : 'today'
+    // recipient: 'chef' (Kavitha only) | 'admin' (Mani only) | 'both' (default)
+    const recipient = ['chef', 'admin', 'both'].includes(body.recipient) ? body.recipient : 'both'
     const date = target === 'next' ? nextLunchDateIST() : todayIST()
 
     const db = admin()
@@ -36,7 +41,12 @@ Deno.serve(async (req) => {
     }
 
     const { data: settings } = await db.from('app_settings').select('chef_email, chef_name').eq('id', 1).single()
-    if (!settings?.chef_email) return json({ error: 'Chef email not set' }, 400)
+    if (recipient !== 'admin' && !settings?.chef_email) return json({ error: 'Chef email not set' }, 400)
+
+    const to = recipient === 'chef' ? [settings.chef_email]
+      : recipient === 'admin' ? [ADMIN_EMAIL]
+      : chefRecipients(settings.chef_email)
+    const greetName = recipient === 'admin' ? 'Mani' : (settings.chef_name || 'Chef')
 
     const roster = await lunchRoster(db, date)
     const { data: meta } = await db.from('day_meta').select('guest_count, note').eq('lunch_date', date).maybeSingle()
@@ -55,19 +65,20 @@ Deno.serve(async (req) => {
 
     const html = shell(
       `${label}'s lunch — ${total} plates`,
-      `<p>Hi ${settings.chef_name || 'Chef'} — here's the list for <b>${fmtDate(date)}</b>.</p>
+      `<p>Hi ${greetName}, here's the lunch list for <b>${fmtDate(date)}</b>.</p>
        <p style="font-size:17px;margin:14px 0">
          <b>${total}</b> plates &nbsp;·&nbsp; 🟢 ${veg.length} veg &nbsp;·&nbsp; 🔴 ${nonveg.length} non-veg
          ${guests ? `&nbsp;·&nbsp; 👥 ${guests} guest${guests > 1 ? 's' : ''}` : ''}
        </p>
        <table style="width:100%;border-collapse:collapse;margin:8px 0 4px">${roster.map(nameRow).join('')}</table>
        ${meta?.note ? `<p style="margin-top:14px;color:#5a645c"><b>Note:</b> ${meta.note}</p>` : ''}
-       <p style="color:#5a645c;font-size:13px;margin-top:16px">${target === 'next' ? 'Preview — final list arrives at 11:15 AM.' : 'Final list. Any change after this comes as a +1 / −1 update.'}</p>`
+       <p style="color:#5a645c;font-size:13px;margin-top:16px">${target === 'next' ? 'Final list for tomorrow. Any change after this comes as a +1 / −1 update.' : 'Any change after this comes as a +1 / −1 update.'}</p>`,
+      `${total} plates for ${fmtDate(date)}`
     )
 
-    await sendEmail(settings.chef_email, `${label}'s lunch: ${total} plates (${fmtDate(date)})`, html)
+    await sendEmail(to, `${label}'s lunch: ${total} plates (${fmtDate(date)})`, html)
 
-    return json({ ok: true, target, date, plates: total, veg: veg.length, nonveg: nonveg.length, guests })
+    return json({ ok: true, target, date, recipient, plates: total, veg: veg.length, nonveg: nonveg.length, guests })
   } catch (err) {
     console.error(err)
     return json({ error: String(err) }, 500)

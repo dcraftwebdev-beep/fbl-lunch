@@ -20,14 +20,28 @@ export const json = (body, status = 200) =>
     headers: { ...cors, 'Content-Type': 'application/json' },
   })
 
-export async function sendEmail(to, subject, html) {
+// Daily chef list and reports are also copied to this admin inbox.
+export const ADMIN_EMAIL = 'mani@firebrandlabs.in'
+
+// Basecamp lunch chat. Used for the "message the group" button in emails.
+// Change this one line if the chat URL ever changes.
+export const CHAT_LINK = 'https://3.basecamp.com/5335179/buckets/48163421/chats/10119095687'
+
+// Recipients for chef-facing mail: the chef plus the admin (Mani).
+export const chefRecipients = (chefEmail) => [chefEmail, ADMIN_EMAIL].filter(Boolean)
+
+// `to` may be a string or an array. `attachments` is an optional array of
+// { filename, content } where content is base64 (Resend format).
+export async function sendEmail(to, subject, html, attachments) {
+  const payload = { from: FROM, to, subject, html }
+  if (attachments && attachments.length) payload.attachments = attachments
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`)
 }
@@ -65,36 +79,32 @@ export const isWeekendIST = () => {
 }
 
 /* ---------------- order window ---------------- */
-// MORNING-ONLY window. Lunch runs Mon–Fri. On a lunch day the register
-// is open from midnight until 11:15 AM IST, when the kitchen list locks.
-// There is no evening / overnight ordering anymore — everything is same
-// day. Joins + cancels work everywhere during the window (Basecamp
-// !lunch in/out, email buttons, dashboard); outside it the register is
-// locked. The daily rhythm:
-//   10:00 AM → morning post: defaults are IN, today's list to Basecamp
-//   11:00 AM → reminder post ("last chance, closes 11:15")
-//   11:15 AM → window closes, final list posted + chef list
+// EVENING ordering for the NEXT working day. Lunch runs Mon to Fri. The
+// evening before (Sun to Thu) the window opens 4:00 PM and closes 5:00 PM
+// IST. On the lunch day itself the list is already locked.
+//   4:00 PM : open. defaults in, tomorrow's list to Basecamp + member mail
+//   4:30 PM : last call reminder
+//   5:00 PM : close. final list to Basecamp + chef list (for tomorrow)
+// Outside 4:00 to 5:00 PM, Sun to Thu, the register is locked.
 
-export const MORNING_CLOSE_MIN = 11 * 60 + 15 // 11:15 AM IST (window closes)
+export const ORDER_OPEN_MIN = 16 * 60   // 4:00 PM IST
+export const ORDER_CLOSE_MIN = 17 * 60  // 5:00 PM IST
 
 export const nowISTMinutes = () => {
   const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
   return ist.getUTCHours() * 60 + ist.getUTCMinutes()
 }
 
-// The window is open Mon–Fri, any time before 11:15 AM IST. Always
-// ordering for TODAY.
-export const morningLegOpen = () => {
+// Open Sun to Thu (weekday 0 to 4), 4:00 to 5:00 PM IST.
+export const orderWindowOpen = () => {
   const ist = new Date(Date.now() + 5.5 * 3600 * 1000)
   const wd = ist.getUTCDay()
   const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes()
-  return wd >= 1 && wd <= 5 && mins < MORNING_CLOSE_MIN
+  return wd <= 4 && mins >= ORDER_OPEN_MIN && mins < ORDER_CLOSE_MIN
 }
 
-export const orderWindowOpen = () => morningLegOpen()
-
-// The lunch day the window is ordering for — always today now.
-export const orderTargetDate = () => todayIST()
+// We always order for the next working lunch day (tomorrow).
+export const orderTargetDate = () => nextLunchDateIST()
 
 /* ---------------- default daily lunch members ---------------- */
 // Members flagged is_default in the roster are IN by default every lunch
@@ -285,19 +295,23 @@ export const htmlPage = (title, msg, ok = true) =>
 
 /* ---------------- email shell ---------------- */
 
-// Brand-coloured email shell. `subtitle` is an optional eyebrow tagline
+// Clean, professional FBL email shell. `subtitle` is an optional line
 // under the title.
 export const shell = (title, body, subtitle = '') => `
-<div style="margin:0;padding:28px 12px;background:#eef1ea;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e2e7dc;box-shadow:0 12px 32px -14px rgba(23,69,43,0.28);">
-    <div style="background:#1f5c38;background-image:linear-gradient(135deg,#22683e,#153a27);padding:26px 30px;">
-      <div style="font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#a8c5b2;font-weight:600;">🍛&nbsp;&nbsp;Firebrand Labs · Lunch</div>
-      <div style="margin-top:13px;font-size:23px;font-weight:700;color:#ffffff;line-height:1.22;">${title}</div>
-      ${subtitle ? `<div style="margin-top:6px;font-size:13px;color:#bcd4c4;">${subtitle}</div>` : ''}
+<div style="margin:0;padding:32px 14px;background:#f3f4f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e6e8e1;border-radius:14px;overflow:hidden;">
+    <div style="padding:24px 34px 0;">
+      <div style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#1f5c38;font-weight:700;">Firebrand Labs</div>
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#a0a89a;margin-top:3px;">Lunch Register</div>
     </div>
-    <div style="padding:28px 30px;color:#1c221d;font-size:15px;line-height:1.65;">${body}</div>
-    <div style="padding:16px 30px;border-top:1px solid #eef1ea;background:#fafbf8;color:#8a9384;font-size:12px;letter-spacing:0.02em;">
-      Firebrand Labs · internal lunch register
+    <div style="height:1px;background:#eef0ea;margin:18px 34px 0;"></div>
+    <div style="padding:24px 34px 4px;">
+      <div style="font-size:22px;font-weight:700;color:#182019;line-height:1.3;">${title}</div>
+      ${subtitle ? `<div style="margin-top:7px;font-size:14px;color:#6b7266;">${subtitle}</div>` : ''}
+    </div>
+    <div style="padding:6px 34px 30px;color:#2b322a;font-size:15px;line-height:1.65;">${body}</div>
+    <div style="padding:16px 34px;background:#f7f8f4;border-top:1px solid #eef0ea;color:#9aa295;font-size:12px;line-height:1.5;">
+      Firebrand Labs, internal lunch register. Questions? Just reply to this email.
     </div>
   </div>
 </div>`

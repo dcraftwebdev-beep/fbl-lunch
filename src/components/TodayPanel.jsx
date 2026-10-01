@@ -37,7 +37,7 @@ const nowISTMinutes = () => {
 }
 
 export default function TodayPanel({ data }) {
-  const { members, today, todayMemberIds, addToday, toggleEntry, copyYesterday, dayMeta, setMeta, setKitchenClosed } = data
+  const { members, today, nextLunchDay, todayMemberIds, addToday, toggleEntry, copyYesterday, dayMeta, setMeta, setKitchenClosed } = data
 
   const [text, setText] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -67,12 +67,22 @@ export default function TodayPanel({ data }) {
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const meta = dayMeta[today] || { guest_count: 0, note: '' }
-  const noCooking = !!meta.no_cooking
+  // The "No cooking" switch applies to the NEXT lunch day (the day being ordered).
+  const nextMeta = dayMeta[nextLunchDay] || {}
+  const noCooking = !!nextMeta.no_cooking
+  const fmtDay = (iso) => { const [y, m, d] = (iso || '').split('-'); return d ? `${d}-${m}-${y}` : iso }
   const toggleKitchen = () => {
-    if (!noCooking && !window.confirm(
-      "Announce to the group that there's NO office food today and everyone should eat outside?\n\nThe bot will also turn away !lunch in / !lunch out for today."
-    )) return
-    setKitchenClosed(!noCooking)
+    if (!noCooking) {
+      const reason = window.prompt(
+        `Close the kitchen for the next lunch day (${fmtDay(nextLunchDay)})?\n\nType the reason (e.g. "Chef on leave", "Holiday"). It will be posted to the group and shown on the register.`,
+        ''
+      )
+      if (reason === null) return // cancelled
+      setKitchenClosed(true, reason.trim())
+    } else {
+      if (!window.confirm(`Reopen the kitchen for ${fmtDay(nextLunchDay)}?`)) return
+      setKitchenClosed(false)
+    }
   }
   const inSet = new Set(todayMemberIds)
   const activeMembers = members.filter((m) => m.active)
@@ -170,15 +180,15 @@ export default function TodayPanel({ data }) {
             className={`${styles.kitchenBtn} ${noCooking ? styles.kitchenBtnOn : ''}`}
             onClick={toggleKitchen}
             title={noCooking
-              ? 'Kitchen marked closed for today — click to reopen ordering'
-              : 'Mark today as no cooking & tell the group to eat outside'}
+              ? `Kitchen closed for ${fmtDay(nextLunchDay)}, click to reopen`
+              : `Mark the next lunch day (${fmtDay(nextLunchDay)}) as no cooking`}
           >
-            {noCooking ? '🍳 Reopen kitchen' : '🙅 No cooking today'}
+            {noCooking ? '🍳 Reopen kitchen' : '🙅 No cooking'}
           </button>
           <button
             className={styles.copyBtn}
             onClick={tryCopyYesterday}
-            disabled={ordersClosed || noCooking}
+            disabled={ordersClosed}
             title={ordersClosed ? 'Orders closed for today' : undefined}
           >
             Copy yesterday's list
@@ -188,8 +198,10 @@ export default function TodayPanel({ data }) {
 
       {noCooking && (
         <div className={styles.noCookBanner} role="status">
-          🙅 <b>No office food today.</b> The group has been told to eat outside, and the bot is
-          turning away <code>!lunch in / !lunch out</code>. Click <b>Reopen kitchen</b> to resume ordering.
+          🙅 <b>No office food on {fmtDay(nextLunchDay)}.</b>
+          {nextMeta.no_cooking_reason ? <> Reason: <b>{nextMeta.no_cooking_reason}</b>.</> : null}
+          {' '}The group has been told to eat outside and the bot is turning away
+          {' '}<code>!lunch in / !lunch out</code> for that day. Click <b>Reopen kitchen</b> to resume ordering.
         </div>
       )}
 
