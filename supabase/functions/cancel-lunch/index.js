@@ -17,7 +17,7 @@
 // After deploying with the flag, confirm in Dashboard → Edge Functions
 // → cancel-lunch → Details that "Verify JWT" shows OFF.
 // ─────────────────────────────────────────────────────────────────────
-import { admin, cors, json, sendEmail, shell, fmtDate, orderWindowOpen, orderTargetDate, htmlPage, chefListSent, chefRecipients } from '../_shared/lib.js'
+import { admin, cors, json, sendEmail, shell, fmtDate, orderWindowOpen, orderTargetDate, htmlPage, chefListSent, chefRecipients, postToBasecamp } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   // Email scanners prefetch links with HEAD — answer empty, cancel
@@ -63,18 +63,26 @@ Deno.serve(async (req) => {
 
     const { data: member } = await db.from('members').select('name, food_pref').eq('id', entry.member_id).single()
     await db.from('lunch_entries').delete().eq('id', entry.id)
+    const who = member?.name ?? 'A member'
+
+    // New count after the cancel.
+    const { count } = await db
+      .from('lunch_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('lunch_date', date)
+
+    // Announce the cancel + recount to the Basecamp group.
+    await postToBasecamp(
+      `🔻 <b>${who}</b> cancelled lunch for ${fmtDate(date)}. Now <b>${count ?? 0}</b> plates. 🍛`
+    )
 
     // Tell the chef + admin, but only if the list already went out
     const { data: settings } = await db.from('app_settings').select('chef_email').eq('id', 1).single()
     if (settings?.chef_email && (await chefListSent(db, date))) {
-      const { count } = await db
-        .from('lunch_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('lunch_date', date)
       await sendEmail(
         chefRecipients(settings.chef_email),
-        `Lunch −1: ${member?.name ?? 'A member'}, now ${count} plates (${fmtDate(date)})`,
-        shell('Lunch update: −1', `<p style="margin:0 0 10px;"><b>${member?.name ?? 'A member'}</b> cancelled their plate for ${fmtDate(date)} via the email link.</p>
+        `Lunch −1: ${who}, now ${count} plates (${fmtDate(date)})`,
+        shell('Lunch update: −1', `<p style="margin:0 0 10px;"><b>${who}</b> cancelled their plate for ${fmtDate(date)} via the email link.</p>
           <p style="margin:0;font-size:17px">New team count: <b>${count ?? '?'} plates</b>.</p>`)
       )
     }

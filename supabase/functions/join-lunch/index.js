@@ -24,6 +24,7 @@ import {
   verifyJoin,
   chefListSent,
   chefRecipients,
+  postToBasecamp,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -98,13 +99,20 @@ Deno.serve(async (req) => {
       .insert({ member_id: member.id, lunch_date: d })
     if (insErr) throw insErr
 
+    // New count after the join.
+    const { count } = await db
+      .from('lunch_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('lunch_date', d)
+
+    // Announce the join + recount to the Basecamp group.
+    await postToBasecamp(
+      `🍛 <b>${member.name}</b> joined lunch for ${fmtDate(d)} (${member.food_pref === 'veg' ? '🟢 veg' : '🔴 non-veg'}). Now <b>${count ?? 0}</b> plates.`
+    )
+
     // If the chef list already went out (late click), send a +1 to chef + admin.
     const { data: settings } = await db.from('app_settings').select('chef_email').eq('id', 1).single()
     if (settings?.chef_email && (await chefListSent(db, d))) {
-      const { count } = await db
-        .from('lunch_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('lunch_date', d)
       await sendEmail(
         chefRecipients(settings.chef_email),
         `Lunch +1: ${member.name}, now ${count} plates (${fmtDate(d)})`,
