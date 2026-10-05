@@ -20,11 +20,11 @@ import {
   fmtDate,
   orderWindowOpen,
   orderTargetDate,
-  htmlPage,
   verifyJoin,
   chefListSent,
   chefRecipients,
   postToBasecamp,
+  CHAT_LINK,
 } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
@@ -46,9 +46,15 @@ Deno.serve(async (req) => {
     s = url.searchParams.get('s')
   }
 
-  // Reply in the caller's language: JSON for the app fetch, HTML for a browser.
-  const reply = (ok, title, msg, extra = {}) =>
-    isPost ? json({ ok, message: msg, ...extra }) : htmlPage(title, msg, ok)
+  // POST (the app) gets JSON. A browser click gets a redirect to the
+  // Basecamp group on success (so the person sees the recount there), or
+  // readable plain text on an error. Supabase serves function HTML as
+  // sandboxed text/plain (blank), so we never return an HTML page.
+  const reply = (ok, title, msg, extra = {}) => {
+    if (isPost) return json({ ok, message: msg, ...extra })
+    if (ok) return new Response(null, { status: 302, headers: { Location: CHAT_LINK } })
+    return new Response(`${title}\n\n${msg}`, { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  }
 
   try {
     if (!m || !d || !s) {

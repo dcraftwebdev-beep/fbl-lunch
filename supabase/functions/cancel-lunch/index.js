@@ -17,7 +17,7 @@
 // After deploying with the flag, confirm in Dashboard → Edge Functions
 // → cancel-lunch → Details that "Verify JWT" shows OFF.
 // ─────────────────────────────────────────────────────────────────────
-import { admin, cors, json, sendEmail, shell, fmtDate, orderWindowOpen, orderTargetDate, htmlPage, chefListSent, chefRecipients, postToBasecamp } from '../_shared/lib.js'
+import { admin, cors, json, sendEmail, shell, fmtDate, orderWindowOpen, orderTargetDate, chefListSent, chefRecipients, postToBasecamp, CHAT_LINK } from '../_shared/lib.js'
 
 Deno.serve(async (req) => {
   // Email scanners prefetch links with HEAD — answer empty, cancel
@@ -35,9 +35,16 @@ Deno.serve(async (req) => {
     token = new URL(req.url).searchParams.get('token')
   }
 
-  // Reply in the caller's language: JSON for the app fetch, HTML for a browser.
-  const reply = (ok, title, msg, extra = {}) =>
-    isPost ? json({ ok, message: msg, ...extra }) : htmlPage(title, msg, ok)
+  // Reply in the caller's language. POST (the app) gets JSON. A browser
+  // click gets a redirect to the Basecamp group on success (so the person
+  // sees the recount there), or readable plain text on an error. We cannot
+  // return a rendered HTML page: Supabase serves function HTML as sandboxed
+  // text/plain, which shows blank.
+  const reply = (ok, title, msg, extra = {}) => {
+    if (isPost) return json({ ok, message: msg, ...extra })
+    if (ok) return new Response(null, { status: 302, headers: { Location: CHAT_LINK } })
+    return new Response(`${title}\n\n${msg}`, { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  }
 
   try {
     if (!token) {
